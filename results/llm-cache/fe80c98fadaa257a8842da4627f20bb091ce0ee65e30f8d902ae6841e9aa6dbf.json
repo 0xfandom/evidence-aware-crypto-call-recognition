@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.92, "calls": [], "reasons": ["PRICE_PREDICTION_ONLY", "NO_BUY_ACTION"], "limitations": ["A price forecast alone is not a buy call; no acquisition instruction or disclosed purchase is present."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

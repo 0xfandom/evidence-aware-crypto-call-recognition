@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.97, "calls": [], "reasons": ["SELL_SIDE_ACTION", "NO_BUY_ACTION_IN_POST"], "limitations": ["Post only describes taking profits on SOL and holding stables; no buy-side language present"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["REFERRAL_PITCH", "NO_ASSET_BUY_CALL"], "limitations": ["Post is a sign-up and referral promotion for an exchange, not a call to buy a specific asset; no asset is named as a buy target."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

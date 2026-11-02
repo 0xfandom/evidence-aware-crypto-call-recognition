@@ -34,6 +34,8 @@ def _settings(args: argparse.Namespace) -> LlmSettings:
         overrides["run_budget_usd"] = args.run_budget
     if args.no_cache:
         overrides["cache_dir"] = None
+    if args.replay:
+        overrides.update(cache_dir=args.replay, replay_only=True)
     return LlmSettings(**{**settings.__dict__, **overrides})
 
 
@@ -47,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--model", help="LLM model id (default from EACR_MODEL or claude-haiku-5-5)")
         p.add_argument("--run-budget", type=float, help="Hard USD cap for LLM spend in this run")
         p.add_argument("--no-cache", action="store_true", help="Do not reuse cached LLM decisions")
+        p.add_argument("--replay", type=Path, metavar="DIR",
+                       help="Use only recorded LLM answers from DIR (e.g. results/llm-cache); never call the API")
         p.add_argument("--concurrency", type=int, default=4)
 
     classify_parser = sub.add_parser("classify", help="Classify posts from JSONL (file or - for stdin)")

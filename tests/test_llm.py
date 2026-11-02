@@ -208,3 +208,15 @@ def test_parallel_calls_cannot_overspend_the_run_budget(monkeypatch, settings):
 
     anyio.run(run_all)
     assert len(calls) == 2 and budget.spent_usd <= budget.limit_usd and budget.in_flight == 0
+
+
+def test_replay_serves_recorded_answers_and_never_calls_the_api(monkeypatch, settings):
+    calls = []
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(calls=calls))
+    recorded = make_post("Buying $OP here", source_id="p1")
+    run(classify_with_llm, recorded, settings, RunBudget(1.0))  # records one answer in the cache
+    replay = LlmSettings(model="test-model", cache_dir=settings.cache_dir, replay_only=True)
+    assert run(classify_with_llm, recorded, replay, RunBudget(1.0)).label == Label.BUY
+    missing = run(classify_with_llm, make_post("Buying $OP now", source_id="p2"), replay, RunBudget(1.0))
+    assert missing.label == Label.ABSTAIN and missing.reasons == ("NOT_IN_REPLAY_CACHE",)
+    assert calls == ["p1"]

@@ -83,6 +83,8 @@ class LlmSettings:
     max_usd_per_post: float = DEFAULT_MAX_USD_PER_POST
     run_budget_usd: float = DEFAULT_RUN_BUDGET_USD
     cache_dir: Path | None = DEFAULT_CACHE_DIR
+    # Answers come only from cache_dir; the API is never called. Lets anyone reproduce a recorded run.
+    replay_only: bool = False
 
     @classmethod
     def from_env(cls) -> LlmSettings:
@@ -180,6 +182,9 @@ async def classify_with_llm(post: Post, settings: LlmSettings, budget: RunBudget
         cached = json.loads(cache_file.read_text())
         output = LlmOutput.model_validate(cached["output"])
         return _to_proposal(output, settings, Cost(cache_hits=1))
+    if settings.replay_only:
+        return _abstain("NOT_IN_REPLAY_CACHE", f"No recorded answer for this post and model in {settings.cache_dir}; "
+                        "replay never calls the API.", settings)
 
     async with budget._lock:
         if not budget.can_start(settings.max_usd_per_post):

@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.97, "calls": [], "reasons": ["SELL_SIDE_ACTION", "NEGATIVE_SENTIMENT_NO_BUY"], "limitations": ["Post only dumps (sells) two assets; no buy-side wording present"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

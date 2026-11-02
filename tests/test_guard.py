@@ -160,3 +160,38 @@ def test_symbol_inside_another_word_is_not_a_mention():
     text = "Solid setup. Keep adding. Markets are quiet. Also holding $SOL."
     decision = apply_guard(make_post(text), buy(call(asset="$SOL", supporting="Keep adding.")))
     assert decision.label == Label.ABSTAIN
+
+
+def test_asset_hidden_inside_an_ordinary_word_is_not_written_in_the_post():
+    text = "Get in on something big here, trust me."
+    decision = apply_guard(make_post(text), buy(call(asset="ETH", supporting=text)))
+    assert decision.label == Label.ABSTAIN
+    assert "ASSET_NOT_IN_SOURCE" in decision.reasons
+
+
+def test_condition_text_not_in_the_post_is_replaced_by_the_supporting_text():
+    proposed = ProposedCall("$SOL", TEXT, "explicit", conditional=True,
+                            condition_text="if the SEC approves the ETF next week")
+    decision = apply_guard(make_post(TEXT), buy(proposed))
+    assert decision.calls[0].condition_text == TEXT
+    assert any("condition text not found verbatim" in c for c in decision.guard_corrections)
+
+
+def test_condition_text_copied_from_the_post_is_kept():
+    text = "Buy $ETH if it reclaims 3k."
+    proposed = ProposedCall("$ETH", text, "explicit", conditional=True, condition_text="if it reclaims 3k")
+    decision = apply_guard(make_post(text), buy(proposed))
+    assert decision.calls[0].condition_text == "if it reclaims 3k" and decision.guard_corrections == ()
+
+
+def test_bare_ticker_is_not_evidence_of_a_buy():
+    text = "I sold my $SOL. Anyway, in other news."
+    decision = apply_guard(make_post(text), buy(call(supporting="$SOL")))
+    assert decision.label == Label.ABSTAIN
+    assert "EVIDENCE_ONLY_NAMES_ASSET" in decision.reasons
+
+
+def test_bare_ticker_reply_to_a_pick_request_is_accepted():
+    post = make_post("$SOL", kind=PostKind.REPLY, parent="What should I buy this week?")
+    decision = apply_guard(post, buy(call(supporting="$SOL")))
+    assert decision.label == Label.BUY

@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 import time
 from dataclasses import dataclass, field
@@ -27,6 +28,8 @@ DEFAULT_MAX_USD_PER_POST = 0.05
 DEFAULT_RUN_BUDGET_USD = 2.00
 DEFAULT_CACHE_DIR = Path(".cache/llm")
 TIMEOUT_SECONDS = 120
+MODEL_REASON_PREFIX = "MODEL:"
+_REASON_CODE = re.compile(r"[A-Z][A-Z0-9_]{0,47}")
 
 SYSTEM_PROMPT = resources.files("evidence_aware_crypto_call_recognition.prompts").joinpath("classify_v1.md").read_text()
 PROMPT_VERSION = "classify_v1@" + hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()[:12]
@@ -105,6 +108,9 @@ def _abstain(reason: str, detail: str, settings: LlmSettings, cost: Cost | None 
 
 
 def _to_proposal(output: LlmOutput, settings: LlmSettings, cost: Cost) -> Proposal:
+    """The model's free text never reaches the output: a model-written limitation could claim a token is
+    verified. Its limitations are dropped (the cache keeps the raw answer) and its reason codes are kept
+    only when well-formed, marked as the model's."""
     return Proposal(
         label=Label(output.label),
         confidence=output.confidence,
@@ -113,8 +119,7 @@ def _to_proposal(output: LlmOutput, settings: LlmSettings, cost: Cost) -> Propos
                          c.conditional, c.condition_text)
             for c in output.calls
         ),
-        reasons=tuple(output.reasons),
-        limitations=tuple(output.limitations),
+        reasons=tuple(f"{MODEL_REASON_PREFIX}{r}" for r in output.reasons if _REASON_CODE.fullmatch(r)),
         cost=cost,
         backend="llm",
         model=settings.model,

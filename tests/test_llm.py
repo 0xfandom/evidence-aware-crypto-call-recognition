@@ -169,3 +169,13 @@ def test_hybrid_escalates_weak_spots_even_when_rules_look_confident(monkeypatch,
     monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(calls=calls))
     decision = run(classify, post, Backend.HYBRID, settings, RunBudget(1.0))
     assert decision.versions.backend == "hybrid:llm" and len(calls) == 1
+
+
+def test_model_written_text_never_reaches_the_output(monkeypatch, settings):
+    claims = {**GOOD_OUTPUT, "reasons": ["EXPLICIT", "token is verified!"],
+              "limitations": ["Token verified as the official mint."]}
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(output=claims))
+    decision = run(classify, make_post("Buying $OP here"), Backend.LLM, settings, RunBudget(1.0))
+    assert decision.label == Label.BUY
+    assert not any("verified as" in text for text in decision.limitations)
+    assert "MODEL:EXPLICIT" in decision.reasons and not any("verified" in r for r in decision.reasons)

@@ -1,0 +1,39 @@
+[project]
+name = "evidence-aware-crypto-call-recognition"
+version = "0.1.0"
+description = "Evidence-Aware Crypto Call Recognition: genuine BUY calls in crypto social posts"
+authors = [
+    { name = "0xfandom", email = "kashyapshivank01@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "anyio>=4.4",
+    "fastapi>=0.115",
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+    "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+llm = [
+    "claude-agent-sdk>=0.2.176",
+]
+
+[project.scripts]
+evidence-aware-crypto-call-recognition = "evidence_aware_crypto_call_recognition.cli:main"
+eacr = "evidence_aware_crypto_call_recognition.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["live: calls the real Claude backend (needs credentials, costs money)"]

@@ -122,8 +122,9 @@ uv run eacr serve            # add --port 8765 to change the port
 
 ## Using Claude (optional)
 
-`--backend llm` sends every post to Claude; `--backend hybrid` sends only the
-posts the rules are unsure about. Both use the
+`--backend llm` sends every post to Claude; `--backend hybrid` lets the rules
+settle only clear non-calls and sends everything else, including every rules
+BUY, to Claude. Both use the
 [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk), which ships its
 own CLI, so nothing else needs installing.
 
@@ -160,9 +161,11 @@ Optional settings (defaults shown in `.env.example`):
 Post ──▶ classifier proposes (rules | llm | hybrid) ──▶ evidence guard checks ──▶ Decision
 ```
 
-- **Rules:** offline and instant. They settle obvious posts, and flag known
-  weak spots (an asset named only in a quoted post, scam warnings, several
-  assets) so the hybrid sends those to Claude.
+- **Rules:** offline and instant. In the hybrid they may only rule a post out
+  (no buy call). A rules BUY is never final: Claude must confirm it, because
+  buy wording alone cannot tell "I'm buying" from "whales are buying" or a
+  past trade. Known weak spots (an asset named only in a quoted post, scam
+  warnings, several assets) also always go to Claude.
 - **Claude:** reads implicit, slang, typo and non-English calls. It never sees
   the author or source id, and any failure becomes `ABSTAIN`.
 - **Evidence guard:** every proposed call must quote the post word for word,
@@ -180,18 +183,19 @@ Held-out set `data/eval_v2.jsonl`: 48 synthetic posts, 18 of them real BUYs.
 | Classifier | Model | BUY correct | False BUY | Attribution errors | Cost | Latency per post |
 |---|---|---|---|---|---|---|
 | rules | — | 12 / 18 | 0 | 1 | $0 | under 1 ms |
-| **hybrid** | **Haiku 5.5 (default)** | **17 / 18** | **0** | **0** | **$0.022** | about 5 s when sent to Claude |
-| hybrid | Opus 5.5 | 18 / 18 | 0 | 0 | $0.451 | about 5 s when sent to Claude |
+| **hybrid** | **Haiku 5.5 (default)** | **17 / 18** | **0** | **0** | **$0.026** | about 5 s when sent to Claude |
 
 - No Claude run produced a false BUY or invented evidence.
-- Haiku was measured on the current prompt; Opus on the previous prompt version,
-  which differed only in three clarifications (see [`docs/findings.md`](docs/findings.md)).
+- On this data the hybrid sends 45 of 48 posts to Claude, so it saves little
+  over `--backend llm` ($0.027). The saving comes from everyday posts with no
+  asset and no buy wording, which this BUY-heavy test set has few of.
 - These are **not** accuracy claims: the data is small and synthetic, and the
   95% intervals are wide.
-- Limitations and next steps: [`docs/findings.md`](docs/findings.md).
-- Committed reports are in `results/` (Opus) and `results/haiku/`. Reports that
-  replayed cached answers show $0; `uv run python scripts/compare_models.py`
-  recomputes their real cost.
+- Opus 5.5 was also measured, on an earlier prompt and hybrid rule; see
+  [`docs/findings.md`](docs/findings.md), which also covers limitations and next steps.
+- Committed reports are in `results/haiku/` (the default model) and `results/`
+  (Opus, earlier prompt and hybrid rule). Reports that replayed cached answers
+  show $0; `uv run python scripts/compare_models.py` recomputes their real cost.
 
 ## Project layout
 

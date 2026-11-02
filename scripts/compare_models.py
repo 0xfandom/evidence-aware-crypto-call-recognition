@@ -4,6 +4,9 @@ Committed reports may replay cached LLM answers and then show $0. Real cost and
 latency per post come from `results/measured_llm_costs.json`, recorded on each
 model's uncached run, so hybrid rows show what their escalated posts cost.
 
+Opus rows were measured on an earlier prompt, and its hybrid rows also on the
+earlier hybrid rule (confident rules BUYs skipped the LLM). Haiku rows are current.
+
 Usage: uv run python scripts/compare_models.py
 """
 

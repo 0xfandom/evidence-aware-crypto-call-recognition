@@ -23,7 +23,7 @@
 | `assets.py` | Finds tickers, known names and contract addresses exactly as written |
 | `rules.py` | Offline recogniser: sentence-level buy/sell/negation/retro/hedge cues, quote and reply handling, risk flags (promo, sarcasm, warnings) that force `ABSTAIN`, and weak-spot detection that caps confidence so the hybrid escalates |
 | `llm.py` | Claude Agent SDK call: tools disabled, user settings not loaded, JSON-schema output, per-post and per-run budget, cache, every failure → `ABSTAIN` |
-| `pipeline.py` | `rules`, `llm`, `hybrid` (rules decide when confident ≥ 0.8 and no weak spot is flagged; otherwise escalate to the LLM) |
+| `pipeline.py` | `rules`, `llm`, `hybrid` (rules decide alone only on `NO_NEW_BUY` with confidence ≥ 0.8; every rules BUY, every weak spot and everything else goes to the LLM) |
 | `guard.py` | Evidence integrity, confidence floor, manual-input marker, limitations |
 | `evaluate.py` | Metrics, Wilson confidence intervals, independent re-check of attribution |
 | `api.py` | HTTP API (FastAPI) and the web UI mount; same pipeline, cache and budgets as the CLI |

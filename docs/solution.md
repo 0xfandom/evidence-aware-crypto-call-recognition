@@ -13,9 +13,9 @@ choice below leans towards abstaining rather than guessing.
 
 | Challenge | Approach | Evidence |
 |---|---|---|
-| 1. Semantic recognition | A written BUY policy; a cascade of offline rules and Claude, with escalation on known weak spots | 17–18 of 18 held-out BUYs found by the hybrid, 0 false BUYs |
+| 1. Semantic recognition | A written BUY policy; a cascade where offline rules may only rule a post out and Claude confirms every BUY | 17 of 18 held-out BUYs found by the hybrid, 0 false BUYs |
 | 2. Evidence integrity | A deterministic guard after every classifier; typed contract that cannot claim a verified token | 0 attribution errors from the LLM pipeline; guard invariants under test |
-| 3. Technical implementation | Python package with CLI, HTTP API and web UI; strict input/output contract; 92 passing tests | One-command install; offline by default |
+| 3. Technical implementation | Python package with CLI, HTTP API and web UI; strict input/output contract; 99 passing tests | One-command install; offline by default |
 | 4. Evaluation | Independent held-out sets, freeze before measuring, Wilson intervals, cost and latency | Reports in `results/`, reproducible with one command |
 | 5. Technical leadership | Production plan covering all eight topics and the first three steps | [`production.md`](production.md) |
 
@@ -34,10 +34,11 @@ Recognition is a two-stage cascade:
   possible sarcasm and unresolved assets force `ABSTAIN`.
 - **Claude** (`llm.py`): reads implicit wording, slang, typos and other
   languages, with the policy in its system prompt.
-- **Hybrid** (`pipeline.py`): the rules decide when they are confident; posts
-  with known weak spots always go to Claude. The weak spots are an asset named
-  only in the parent or quoted post, a scam or exploit warning, and more than one
-  asset.
+- **Hybrid** (`pipeline.py`): the rules decide alone only on a confident
+  `NO_NEW_BUY`. Every rules BUY goes to Claude, because buy wording alone cannot
+  tell the author's own call from "whales are buying", a past trade or a joke.
+  Posts with known weak spots also always go to Claude: an asset named only in
+  the parent or quoted post, a scam or exploit warning, and more than one asset.
 
 **How each case in the brief is handled:**
 
@@ -57,7 +58,7 @@ checks (no guarantee against invented evidence), a fine-tuned model (no real
 labelled data), and sentiment or NLI models (bullish is not a recommendation).
 
 **Evidence.** On the held-out set the rules alone found 12 of 18 BUYs; the
-hybrid found 17 (Haiku) or 18 (Opus), with no false BUY. The rules' misses
+hybrid with Haiku found 17, with no false BUY. The rules' misses
 (slang, typos, non-English) are exactly the cases escalated to Claude.
 
 ## Challenge 2: Evidence integrity
@@ -95,7 +96,7 @@ source id.
 |---|---|
 | Reproducible setup and execution | `uv sync --extra llm` from a lockfile; Python 3.12; runs offline with no account. The web UI ships pre-built |
 | Clearly defined input/output contract | Strict Pydantic models in `contract.py` (unknown fields rejected); documented in [`architecture.md`](architecture.md); the same contract over CLI, HTTP API and UI |
-| Automated tests for important edge cases | 92 passing tests: policy cases, guard invariants, Claude wrapper (cache, budget, failures, escalation), API, CLI and metrics. Two documented rule limitations are marked as expected failures |
+| Automated tests for important edge cases | 99 passing tests: policy cases, guard invariants, Claude wrapper (cache, budget, failures, escalation), API, CLI and metrics. Seven documented rule limitations (typos, non-English, and buy wording that is not the author's current call) are marked as expected failures |
 | Understandable implementation | Small modules with one job each: assets, rules, LLM backend, guard, pipeline, evaluation, API |
 | Explicit uncertainty handling | The `ABSTAIN` label, confidence with a floor for BUY, reason codes and limitations on every decision; every Claude error, timeout or exhausted budget becomes `ABSTAIN` |
 | No hardcoded classifications | No per-example rules; lexicons were built from the development set only, and phrases seen in held-out errors were deliberately not added |
@@ -131,8 +132,7 @@ frozen before its first run.
 | Classifier | BUY correct | False BUY | Attribution errors | Cost |
 |---|---|---|---|---|
 | rules | 12 | 0 | 1 | $0 |
-| hybrid, Haiku 5.5 (default) | 17 | 0 | 0 | $0.022 |
-| hybrid, Opus 5.5 (previous prompt version) | 18 | 0 | 0 | $0.451 |
+| hybrid, Haiku 5.5 (default) | 17 | 0 | 0 | $0.026 |
 
 **Development-set results are not presented as accuracy.** The rules found 92%
 of BUYs on the data they were written against and 57–67% on held-out data; that

@@ -187,3 +187,24 @@ def test_hybrid_sends_market_talk_with_an_unknown_coin_to_the_llm(monkeypatch, s
     post = make_post("Kaspa looks like a gift at these levels, sizing up.")
     decision = run(classify, post, Backend.HYBRID, settings, RunBudget(1.0))
     assert decision.versions.backend == "hybrid:llm" and len(calls) == 1
+
+
+def test_parallel_calls_cannot_overspend_the_run_budget(monkeypatch, settings):
+    calls = []
+
+    async def slow_sdk(post, settings):
+        calls.append(post.source_id)
+        await anyio.sleep(0.01)
+        return GOOD_OUTPUT, Cost(usd=0.05, llm_calls=1)
+
+    monkeypatch.setattr(llm, "_call_agent_sdk", slow_sdk)
+    budget = RunBudget(limit_usd=0.10)
+
+    async def run_all():
+        async with anyio.create_task_group() as group:
+            for i in range(6):
+                group.start_soon(classify_with_llm, make_post(f"Buying $OP here {i}", source_id=f"p{i}"),
+                                 settings, budget)
+
+    anyio.run(run_all)
+    assert len(calls) == 2 and budget.spent_usd <= budget.limit_usd and budget.in_flight == 0

@@ -59,11 +59,18 @@ OUTPUT_SCHEMA = LlmOutput.model_json_schema()
 
 @dataclass
 class RunBudget:
-    """Shared across one run. Once spent, remaining posts abstain instead of calling the API."""
+    """Shared across one run. Once spent, remaining posts abstain instead of calling the API.
+
+    Each call in progress reserves the per-call cap, so parallel calls cannot together pass the limit.
+    """
 
     limit_usd: float
     spent_usd: float = 0.0
+    in_flight: int = 0
     _lock: anyio.Lock = field(default_factory=anyio.Lock)
+
+    def can_start(self, call_cap_usd: float) -> bool:
+        return self.spent_usd + (self.in_flight + 1) * call_cap_usd <= self.limit_usd
 
     @property
     def is_exhausted(self) -> bool:
@@ -175,21 +182,26 @@ async def classify_with_llm(post: Post, settings: LlmSettings, budget: RunBudget
         return _to_proposal(output, settings, Cost(cache_hits=1))
 
     async with budget._lock:
-        if budget.is_exhausted:
-            return _abstain("BUDGET_EXHAUSTED", f"Run budget of ${budget.limit_usd:.2f} used up; post not sent to the LLM.",
-                            settings)
+        if not budget.can_start(settings.max_usd_per_post):
+            return _abstain("BUDGET_EXHAUSTED",
+                            f"Run budget of ${budget.limit_usd:.2f} reached (${budget.spent_usd:.4f} spent, "
+                            f"{budget.in_flight} call(s) in progress); post not sent to the LLM.", settings)
+        budget.in_flight += 1
 
+    spent_now = 0.0
     try:
         raw_output, cost = await _call_agent_sdk(post, settings)
+        spent_now = cost.usd
     except ImportError:
         return _abstain("LLM_UNAVAILABLE", "claude-agent-sdk is not installed (uv sync --extra llm).", settings)
     except TimeoutError:
         return _abstain("LLM_TIMEOUT", f"No answer within {TIMEOUT_SECONDS}s.", settings)
     except Exception as error:  # SDK, CLI, auth and network failures all end in ABSTAIN, with the cause kept
         return _abstain("LLM_ERROR", f"{type(error).__name__}: {str(error)[:300]}", settings)
-
-    async with budget._lock:
-        budget.spent_usd += cost.usd
+    finally:
+        async with budget._lock:  # release the reservation and book the real cost in one step
+            budget.in_flight -= 1
+            budget.spent_usd += spent_now
 
     try:
         output = LlmOutput.model_validate(raw_output)

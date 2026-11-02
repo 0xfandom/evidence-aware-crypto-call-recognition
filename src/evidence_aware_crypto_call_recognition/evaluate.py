@@ -159,6 +159,34 @@ def build_report(rows: list[LabelledPost], decisions: list[Decision], backend: B
     return EvalResult(report=report, decisions=decisions)
 
 
+def _subset_summary(report: dict) -> dict:
+    b = report["buy"]
+    return {
+        "n": report["n"],
+        "gold_buy": report["label_distribution"]["BUY"],
+        "buy_correct": b["correct"],
+        "false_buy": b["false_buy"],
+        "precision": b["precision"], "precision_ci95": b["precision_ci95"],
+        "recall": b["recall"], "recall_ci95": b["recall_ci95"],
+        "abstentions": report["abstention"]["count"],
+        "accuracy_3way": report["accuracy_3way"], "accuracy_3way_ci95": report["accuracy_3way_ci95"],
+    }
+
+
+def add_tag_split(result: EvalResult, rows: list[LabelledPost], tags: set[str]) -> EvalResult:
+    """Metrics for rows with any of `tags` and for the rest, e.g. targeted challenge rows vs general rows."""
+    backend = Backend(result.report["backend"])
+    pairs = list(zip(rows, result.decisions, strict=True))
+    subsets = {}
+    for name, keep in (("tagged", True), ("untagged", False)):
+        chosen = [(r, d) for r, d in pairs if bool(set(r.gold.tags) & tags) == keep]
+        if chosen:
+            sub = build_report([r for r, _ in chosen], [d for _, d in chosen], backend, 0.0).report
+            subsets[name] = _subset_summary(sub)
+    report = {**result.report, "tag_split": {"tags": sorted(tags), **subsets}}
+    return EvalResult(report=report, decisions=result.decisions)
+
+
 def render_markdown(report: dict, dataset_name: str) -> str:
     b, a, c = report["buy"], report["abstention"], report["cost"]
     lines = [
@@ -189,6 +217,15 @@ def render_markdown(report: dict, dataset_name: str) -> str:
     ]
     for gold, row in report["confusion_gold_x_predicted"].items():
         lines.append(f"| {gold} | {row['BUY']} | {row['NO_NEW_BUY']} | {row['ABSTAIN']} |")
+    if split := report.get("tag_split"):
+        lines += ["", f"## Split by tags: {', '.join(split['tags'])}", "",
+                  "| rows | n | BUY correct / gold | false BUY | BUY recall (95% CI) | abstentions | 3-way accuracy (95% CI) |",
+                  "|---|---|---|---|---|---|---|"]
+        for name, label in (("tagged", "with any of these tags"), ("untagged", "without them")):
+            if s := split.get(name):
+                lines.append(f"| {label} | {s['n']} | {s['buy_correct']} / {s['gold_buy']} | {s['false_buy']} "
+                             f"| {s['recall']} {s['recall_ci95']} | {s['abstentions']} "
+                             f"| {s['accuracy_3way']} {s['accuracy_3way_ci95']} |")
     lines += ["", "## Accuracy by tag", "", "| tag | correct / total |", "|---|---|"]
     lines += [f"| {t} | {v['correct']} / {v['total']} |" for t, v in report["by_tag"].items()]
     lines += ["", "## Mismatches", "", "| source_id | gold | predicted | reasons | text |", "|---|---|---|---|---|"]

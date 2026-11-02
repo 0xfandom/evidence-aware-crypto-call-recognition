@@ -1,0 +1,236 @@
+{
+  "backend": "hybrid",
+  "n": 48,
+  "label_distribution": {
+    "BUY": 18,
+    "NO_NEW_BUY": 20,
+    "ABSTAIN": 10
+  },
+  "confusion_gold_x_predicted": {
+    "BUY": {
+      "BUY": 17,
+      "NO_NEW_BUY": 0,
+      "ABSTAIN": 1
+    },
+    "NO_NEW_BUY": {
+      "BUY": 0,
+      "NO_NEW_BUY": 20,
+      "ABSTAIN": 0
+    },
+    "ABSTAIN": {
+      "BUY": 0,
+      "NO_NEW_BUY": 2,
+      "ABSTAIN": 8
+    }
+  },
+  "buy": {
+    "correct": 17,
+    "missed_as_no_new_buy": 0,
+    "missed_as_abstain": 1,
+    "false_buy": 0,
+    "false_buy_from_no_new_buy": 0,
+    "false_buy_from_abstain": 0,
+    "precision": 1.0,
+    "precision_ci95": [
+      0.816,
+      1.0
+    ],
+    "recall": 0.944,
+    "recall_ci95": [
+      0.742,
+      0.99
+    ]
+  },
+  "abstention": {
+    "count": 9,
+    "rate": 0.188,
+    "on_gold_abstain": 8,
+    "on_gold_buy": 1,
+    "on_gold_no_new_buy": 0
+  },
+  "accuracy_3way": 0.938,
+  "accuracy_3way_ci95": [
+    0.832,
+    0.979
+  ],
+  "accuracy_when_decided": 0.949,
+  "attribution_errors_on_predicted_buy": {},
+  "decisions_with_guard_corrections": 1,
+  "cost": {
+    "usd_total": 0.0,
+    "llm_calls": 0,
+    "cache_hits": 39,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms_mean": 0.03,
+    "latency_ms_p95": 0.121,
+    "wall_seconds": 0.04
+  },
+  "by_tag": {
+    "conditional": {
+      "correct": 2,
+      "total": 2
+    },
+    "context_only_asset": {
+      "correct": 5,
+      "total": 6
+    },
+    "contract_address": {
+      "correct": 2,
+      "total": 2
+    },
+    "emoji": {
+      "correct": 13,
+      "total": 15
+    },
+    "existing_position": {
+      "correct": 4,
+      "total": 4
+    },
+    "explicit": {
+      "correct": 11,
+      "total": 11
+    },
+    "forecast": {
+      "correct": 3,
+      "total": 3
+    },
+    "generic_advice": {
+      "correct": 1,
+      "total": 1
+    },
+    "implicit": {
+      "correct": 11,
+      "total": 12
+    },
+    "joke": {
+      "correct": 1,
+      "total": 1
+    },
+    "long_post": {
+      "correct": 2,
+      "total": 2
+    },
+    "missing_author": {
+      "correct": 1,
+      "total": 1
+    },
+    "missing_source": {
+      "correct": 1,
+      "total": 1
+    },
+    "multi_asset": {
+      "correct": 10,
+      "total": 10
+    },
+    "negation": {
+      "correct": 5,
+      "total": 5
+    },
+    "no_asset": {
+      "correct": 3,
+      "total": 3
+    },
+    "non_english_mix": {
+      "correct": 2,
+      "total": 2
+    },
+    "payment_currency": {
+      "correct": 5,
+      "total": 6
+    },
+    "promo": {
+      "correct": 3,
+      "total": 3
+    },
+    "question": {
+      "correct": 1,
+      "total": 1
+    },
+    "quote": {
+      "correct": 3,
+      "total": 3
+    },
+    "referral": {
+      "correct": 1,
+      "total": 1
+    },
+    "reply_context": {
+      "correct": 3,
+      "total": 4
+    },
+    "repost": {
+      "correct": 1,
+      "total": 1
+    },
+    "retrospective": {
+      "correct": 2,
+      "total": 2
+    },
+    "sarcasm": {
+      "correct": 3,
+      "total": 3
+    },
+    "slang": {
+      "correct": 5,
+      "total": 6
+    },
+    "warning": {
+      "correct": 6,
+      "total": 6
+    }
+  },
+  "mismatches": [
+    {
+      "source_id": "ev2-x-1029",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.8,
+      "reasons": [
+        "NO_BUY_ACTION",
+        "ATTENTION_EMOJI_ONLY",
+        "ESCALATED_FROM_RULES:NO_NEW_BUY"
+      ],
+      "tags": [
+        "emoji"
+      ],
+      "text": "$SEI 👀👀👀"
+    },
+    {
+      "source_id": "ev2-telegram-2006",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.7,
+      "reasons": [
+        "VAGUE_HYPOTHETICAL",
+        "NO_BUY_SIDE_ACTION",
+        "PARENT_IS_OBSERVATION_NOT_PICK_REQUEST",
+        "ESCALATED_FROM_RULES:NO_NEW_BUY"
+      ],
+      "tags": [
+        "context_only_asset",
+        "reply_context"
+      ],
+      "text": "ok this might be the one"
+    },
+    {
+      "source_id": "ev2-telegram-2016",
+      "gold": "BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.6,
+      "reasons": [
+        "POSSIBLE_JOKE_OR_SARCASM",
+        "BUY_SIDE_WORDING_PRESENT",
+        "MEME_TONE",
+        "ESCALATED_FROM_RULES:ABSTAIN"
+      ],
+      "tags": [
+        "payment_currency",
+        "implicit",
+        "emoji",
+        "slang"
+      ],
+      "text": "paid 0.5 ETH for 2M $NOODL lol 🍜 bag secured, still buying under 2c"
+    }
+  ]
+}

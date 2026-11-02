@@ -1,0 +1,358 @@
+{
+  "backend": "rules",
+  "n": 48,
+  "label_distribution": {
+    "BUY": 18,
+    "NO_NEW_BUY": 20,
+    "ABSTAIN": 10
+  },
+  "confusion_gold_x_predicted": {
+    "BUY": {
+      "BUY": 12,
+      "NO_NEW_BUY": 2,
+      "ABSTAIN": 4
+    },
+    "NO_NEW_BUY": {
+      "BUY": 0,
+      "NO_NEW_BUY": 17,
+      "ABSTAIN": 3
+    },
+    "ABSTAIN": {
+      "BUY": 0,
+      "NO_NEW_BUY": 2,
+      "ABSTAIN": 8
+    }
+  },
+  "buy": {
+    "correct": 12,
+    "missed_as_no_new_buy": 2,
+    "missed_as_abstain": 4,
+    "false_buy": 0,
+    "false_buy_from_no_new_buy": 0,
+    "false_buy_from_abstain": 0,
+    "precision": 1.0,
+    "precision_ci95": [
+      0.757,
+      1.0
+    ],
+    "recall": 0.667,
+    "recall_ci95": [
+      0.437,
+      0.837
+    ]
+  },
+  "abstention": {
+    "count": 15,
+    "rate": 0.312,
+    "on_gold_abstain": 8,
+    "on_gold_buy": 4,
+    "on_gold_no_new_buy": 3
+  },
+  "accuracy_3way": 0.771,
+  "accuracy_3way_ci95": [
+    0.635,
+    0.867
+  ],
+  "accuracy_when_decided": 0.879,
+  "attribution_errors_on_predicted_buy": {
+    "asset_extra": 1
+  },
+  "decisions_with_guard_corrections": 1,
+  "cost": {
+    "usd_total": 0.0,
+    "llm_calls": 0,
+    "cache_hits": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms_mean": 0.09,
+    "latency_ms_p95": 0.199,
+    "wall_seconds": 0.03
+  },
+  "by_tag": {
+    "conditional": {
+      "correct": 2,
+      "total": 2
+    },
+    "context_only_asset": {
+      "correct": 3,
+      "total": 6
+    },
+    "contract_address": {
+      "correct": 2,
+      "total": 2
+    },
+    "emoji": {
+      "correct": 11,
+      "total": 15
+    },
+    "existing_position": {
+      "correct": 4,
+      "total": 4
+    },
+    "explicit": {
+      "correct": 8,
+      "total": 11
+    },
+    "forecast": {
+      "correct": 3,
+      "total": 3
+    },
+    "generic_advice": {
+      "correct": 1,
+      "total": 1
+    },
+    "implicit": {
+      "correct": 9,
+      "total": 12
+    },
+    "joke": {
+      "correct": 1,
+      "total": 1
+    },
+    "long_post": {
+      "correct": 2,
+      "total": 2
+    },
+    "missing_author": {
+      "correct": 1,
+      "total": 1
+    },
+    "missing_source": {
+      "correct": 1,
+      "total": 1
+    },
+    "multi_asset": {
+      "correct": 7,
+      "total": 10
+    },
+    "negation": {
+      "correct": 3,
+      "total": 5
+    },
+    "no_asset": {
+      "correct": 3,
+      "total": 3
+    },
+    "non_english_mix": {
+      "correct": 1,
+      "total": 2
+    },
+    "payment_currency": {
+      "correct": 4,
+      "total": 6
+    },
+    "promo": {
+      "correct": 3,
+      "total": 3
+    },
+    "question": {
+      "correct": 1,
+      "total": 1
+    },
+    "quote": {
+      "correct": 2,
+      "total": 3
+    },
+    "referral": {
+      "correct": 1,
+      "total": 1
+    },
+    "reply_context": {
+      "correct": 2,
+      "total": 4
+    },
+    "repost": {
+      "correct": 1,
+      "total": 1
+    },
+    "retrospective": {
+      "correct": 2,
+      "total": 2
+    },
+    "sarcasm": {
+      "correct": 3,
+      "total": 3
+    },
+    "slang": {
+      "correct": 5,
+      "total": 6
+    },
+    "warning": {
+      "correct": 2,
+      "total": 6
+    }
+  },
+  "mismatches": [
+    {
+      "source_id": "ev2-telegram-1009",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION"
+      ],
+      "tags": [
+        "non_english_mix",
+        "explicit",
+        "emoji"
+      ],
+      "text": "bhai $DOGE abhi le lo, 0.10 pe bahut sasta hai. baad mein mat rona 😅"
+    },
+    {
+      "source_id": "ev2-x-1029",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION"
+      ],
+      "tags": [
+        "emoji"
+      ],
+      "text": "$SEI 👀👀👀"
+    },
+    {
+      "source_id": "ev2-discord-2002",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.7,
+      "reasons": [
+        "RETROSPECTIVE",
+        "WEAK_SPOT_CONTEXT_ASSET"
+      ],
+      "tags": [
+        "context_only_asset",
+        "reply_context",
+        "implicit"
+      ],
+      "text": "yes. bought more this morning and still bidding below here"
+    },
+    {
+      "source_id": "ev2-x-2004",
+      "gold": "NO_NEW_BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.5,
+      "reasons": [
+        "QUOTE_STANCE_UNCLEAR",
+        "WEAK_SPOT_CONTEXT_ASSET"
+      ],
+      "tags": [
+        "context_only_asset",
+        "quote",
+        "negation"
+      ],
+      "text": "Not touching this. Team wallet holds 40% of supply."
+    },
+    {
+      "source_id": "ev2-telegram-2006",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.7,
+      "reasons": [
+        "NO_ASSET_NO_ACTION",
+        "WEAK_SPOT_CONTEXT_ASSET"
+      ],
+      "tags": [
+        "context_only_asset",
+        "reply_context"
+      ],
+      "text": "ok this might be the one"
+    },
+    {
+      "source_id": "ev2-x-2007",
+      "gold": "NO_NEW_BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.5,
+      "reasons": [
+        "BUY_CUE_WITH_ASSET",
+        "WARNING_CONTEXT"
+      ],
+      "tags": [
+        "warning",
+        "negation",
+        "emoji"
+      ],
+      "text": "⚠️ $GLOOM is a honeypot. You can buy but you cannot sell. Sell function blacklists every non-team wallet. Stay away."
+    },
+    {
+      "source_id": "ev2-telegram-2008",
+      "gold": "NO_NEW_BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.5,
+      "reasons": [
+        "BUY_CUE_WITH_ASSET",
+        "WARNING_CONTEXT"
+      ],
+      "tags": [
+        "warning"
+      ],
+      "text": "People are buying $MOONRAT blindly because a bot channel shilled it. Dev just pulled 80% of the liquidity. Rug confirmed."
+    },
+    {
+      "source_id": "ev2-discord-2010",
+      "gold": "BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.5,
+      "reasons": [
+        "BUY_CUE_WITH_ASSET",
+        "WARNING_CONTEXT"
+      ],
+      "tags": [
+        "warning",
+        "multi_asset",
+        "implicit"
+      ],
+      "text": "Bridge exploit on $VYRA, ~$14M drained. avoid until there's a real audit. Meanwhile I'm rotating into $ETH, buying spot here."
+    },
+    {
+      "source_id": "ev2-x-2011",
+      "gold": "BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.5,
+      "reasons": [
+        "PROMOTIONAL_CONTENT",
+        "WEAK_SPOT_WARNING",
+        "WEAK_SPOT_MULTIPLE_ASSETS"
+      ],
+      "tags": [
+        "warning",
+        "multi_asset",
+        "explicit"
+      ],
+      "text": "PSA: the $ZORPH presale is a scam, the 'team' photos are AI-generated. If you want exposure to this sector just buy $FET and sleep well."
+    },
+    {
+      "source_id": "ev2-x-2013",
+      "gold": "BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.4,
+      "reasons": [
+        "UNRESOLVED_ASSET",
+        "WEAK_SPOT_MULTIPLE_ASSETS"
+      ],
+      "tags": [
+        "payment_currency",
+        "multi_asset",
+        "explicit"
+      ],
+      "text": "Just swapped all my $USDC into $SOL. This is the bottom, get in."
+    },
+    {
+      "source_id": "ev2-telegram-2016",
+      "gold": "BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.45,
+      "reasons": [
+        "POSSIBLE_SARCASM_OR_JOKE",
+        "WEAK_SPOT_MULTIPLE_ASSETS"
+      ],
+      "tags": [
+        "payment_currency",
+        "implicit",
+        "emoji",
+        "slang"
+      ],
+      "text": "paid 0.5 ETH for 2M $NOODL lol 🍜 bag secured, still buying under 2c"
+    }
+  ]
+}

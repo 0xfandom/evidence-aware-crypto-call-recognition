@@ -89,6 +89,16 @@ def _names_asset(written: str, text: str) -> bool:
     return bool(core) and re.search(rf"(?<![\w$]){re.escape(core)}(?!\w)", text, re.IGNORECASE) is not None
 
 
+def _only_names_assets(supporting: str, written: str) -> bool:
+    """True when nothing but asset names is left once they are removed ("$SOL", "$SOL 🚀", "$SOL $JUP")."""
+    rest = supporting
+    for mention in sorted(find_asset_mentions(supporting), key=lambda m: m.start, reverse=True):
+        rest = rest[:mention.start] + " " + rest[mention.end:]
+    if written:
+        rest = re.sub(rf"(?<!\w){re.escape(written)}(?!\w)", " ", rest, flags=re.IGNORECASE)
+    return re.search(r"[^\W\d_]", rest) is None
+
+
 def _evidence_mentions_asset(written: str, supporting: str, origin_text: str, origin: EvidenceOrigin,
                              post: Post) -> bool:
     """The evidence must be about the asset, not merely any verbatim sentence from the post."""
@@ -125,12 +135,23 @@ def _check_call(call: ProposedCall, post: Post) -> tuple[Call | None, list[str],
     if written and not _evidence_mentions_asset(written, supporting, origin_text, origin, post):
         return (None, [f"dropped call: supporting text {supporting[:80]!r} does not mention asset '{written}'"],
                 "EVIDENCE_NOT_ABOUT_ASSET")
+    # A bare ticker is not evidence of a buy, except in a reply or quote, where the post being
+    # answered carries the action ("what should I buy?" → "$SOL").
+    answers_context = origin == EvidenceOrigin.POST and post.context.kind in (PostKind.REPLY, PostKind.QUOTE)
+    if _only_names_assets(supporting, written) and not answers_context:
+        return (None, [f"dropped call: supporting text {supporting[:80]!r} only names the asset"],
+                "EVIDENCE_ONLY_NAMES_ASSET")
 
     asset, asset_correction = _resolve_asset(call.asset_as_written)
     if asset_correction:
         corrections.append(asset_correction)
 
-    condition_text = call.condition_text
+    condition_text = (call.condition_text or "").strip() or None
+    sources = (post.text, post.context.parent_text, post.context.quoted_text)
+    if condition_text and not any(t and condition_text in t for t in sources):
+        corrections.append(f"condition text not found verbatim in the source, replaced by the supporting text: "
+                           f"{condition_text[:80]!r}")
+        condition_text = None
     if call.conditional and not condition_text:
         condition_text = supporting
 

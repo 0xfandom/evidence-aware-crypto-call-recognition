@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.96, "calls": [], "reasons": ["EXISTING_POSITION_HOLD_ONLY", "EXPLICIT_NO_ADD"], "limitations": ["Post only states holding ETH bought at 1800; no buy-side action now"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

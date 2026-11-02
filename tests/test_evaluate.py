@@ -33,3 +33,18 @@ def test_wrong_asset_is_counted_as_attribution_error():
     rows = [row("Buying $NEAR here.", Label.BUY, ("OP",), "a")]
     report = evaluate(rows, Backend.RULES).report
     assert report["attribution_errors_on_predicted_buy"] == {"asset_missed": 1, "asset_extra": 1}
+
+
+def test_tag_split_reports_tagged_and_untagged_rows_separately():
+    from evidence_aware_crypto_call_recognition.evaluate import add_tag_split, render_markdown
+    rows = [
+        LabelledPost(post=make_post("Buying $NEAR here.", source_id="a"),
+                     gold=Gold(label=Label.BUY, assets=("NEAR",), tags=("warning",))),
+        row("gm everyone", Label.NO_NEW_BUY, source_id="b"),
+        row("Accumulate $OP in this range.", Label.BUY, ("OP",), "c"),
+    ]
+    result = add_tag_split(evaluate(rows, Backend.RULES), rows, {"warning"})
+    split = result.report["tag_split"]
+    assert (split["tagged"]["n"], split["untagged"]["n"]) == (1, 2)
+    assert split["untagged"]["gold_buy"] == 1
+    assert "Split by tags: warning" in render_markdown(result.report, "x.jsonl")

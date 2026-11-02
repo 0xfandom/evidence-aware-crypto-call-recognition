@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["PORTFOLIO_LIST_ONLY", "EXISTING_POSITION_NO_CHANGE"], "limitations": ["Post is a portfolio allocation statement with no explicit buy-side action"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

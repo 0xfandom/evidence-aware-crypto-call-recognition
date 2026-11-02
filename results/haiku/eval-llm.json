@@ -57,14 +57,14 @@
   "attribution_errors_on_predicted_buy": {},
   "decisions_with_guard_corrections": 2,
   "cost": {
-    "usd_total": 0.0236,
-    "llm_calls": 40,
-    "cache_hits": 0,
-    "input_tokens": 127563,
-    "output_tokens": 17941,
-    "latency_ms_mean": 5318.22,
-    "latency_ms_p95": 6578.8,
-    "wall_seconds": 55.95
+    "usd_total": 0.0,
+    "llm_calls": 0,
+    "cache_hits": 40,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms_mean": 0.0,
+    "latency_ms_p95": 0.0,
+    "wall_seconds": 0.03
   },
   "by_tag": {
     "conditional": {
@@ -175,8 +175,8 @@
       "predicted": "NO_NEW_BUY",
       "confidence": 0.9,
       "reasons": [
-        "NON_COMMITTAL_REPLY",
-        "NO_EXPLICIT_BUY_ACTION"
+        "MODEL:NON_COMMITTAL_REPLY",
+        "MODEL:NO_EXPLICIT_BUY_ACTION"
       ],
       "tags": [
         "reply_context",
@@ -190,9 +190,9 @@
       "predicted": "ABSTAIN",
       "confidence": 0.7,
       "reasons": [
-        "POSSIBLE_SARCASM",
-        "CLOWN_EMOJI_MOCKERY_SIGNAL",
-        "ABSURD_CLAIM_ABOUT_OLD_TEAM"
+        "MODEL:POSSIBLE_SARCASM",
+        "MODEL:CLOWN_EMOJI_MOCKERY_SIGNAL",
+        "MODEL:ABSURD_CLAIM_ABOUT_OLD_TEAM"
       ],
       "tags": [
         "sarcasm",

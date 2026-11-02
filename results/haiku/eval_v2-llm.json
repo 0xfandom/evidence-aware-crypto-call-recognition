@@ -57,14 +57,14 @@
   "attribution_errors_on_predicted_buy": {},
   "decisions_with_guard_corrections": 1,
   "cost": {
-    "usd_total": 0.0273,
-    "llm_calls": 48,
-    "cache_hits": 0,
-    "input_tokens": 152278,
-    "output_tokens": 20550,
-    "latency_ms_mean": 5142.52,
-    "latency_ms_p95": 6292.3,
-    "wall_seconds": 64.76
+    "usd_total": 0.0,
+    "llm_calls": 0,
+    "cache_hits": 48,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms_mean": 0.0,
+    "latency_ms_p95": 0.0,
+    "wall_seconds": 0.03
   },
   "by_tag": {
     "conditional": {
@@ -187,8 +187,8 @@
       "predicted": "NO_NEW_BUY",
       "confidence": 0.8,
       "reasons": [
-        "NO_BUY_ACTION",
-        "ATTENTION_EMOJI_ONLY"
+        "MODEL:NO_BUY_ACTION",
+        "MODEL:ATTENTION_EMOJI_ONLY"
       ],
       "tags": [
         "emoji"
@@ -201,9 +201,9 @@
       "predicted": "NO_NEW_BUY",
       "confidence": 0.7,
       "reasons": [
-        "VAGUE_HYPOTHETICAL",
-        "NO_BUY_SIDE_ACTION",
-        "PARENT_IS_OBSERVATION_NOT_PICK_REQUEST"
+        "MODEL:VAGUE_HYPOTHETICAL",
+        "MODEL:NO_BUY_SIDE_ACTION",
+        "MODEL:PARENT_IS_OBSERVATION_NOT_PICK_REQUEST"
       ],
       "tags": [
         "context_only_asset",
@@ -217,9 +217,9 @@
       "predicted": "ABSTAIN",
       "confidence": 0.6,
       "reasons": [
-        "POSSIBLE_JOKE_OR_SARCASM",
-        "BUY_SIDE_WORDING_PRESENT",
-        "MEME_TONE"
+        "MODEL:POSSIBLE_JOKE_OR_SARCASM",
+        "MODEL:BUY_SIDE_WORDING_PRESENT",
+        "MODEL:MEME_TONE"
       ],
       "tags": [
         "payment_currency",
@@ -229,5 +229,56 @@
       ],
       "text": "paid 0.5 ETH for 2M $NOODL lol 🍜 bag secured, still buying under 2c"
     }
-  ]
+  ],
+  "tag_split": {
+    "tags": [
+      "context_only_asset",
+      "payment_currency",
+      "warning"
+    ],
+    "tagged": {
+      "n": 18,
+      "gold_buy": 8,
+      "buy_correct": 7,
+      "false_buy": 0,
+      "precision": 1.0,
+      "precision_ci95": [
+        0.646,
+        1.0
+      ],
+      "recall": 0.875,
+      "recall_ci95": [
+        0.529,
+        0.978
+      ],
+      "abstentions": 3,
+      "accuracy_3way": 0.889,
+      "accuracy_3way_ci95": [
+        0.672,
+        0.969
+      ]
+    },
+    "untagged": {
+      "n": 30,
+      "gold_buy": 10,
+      "buy_correct": 10,
+      "false_buy": 0,
+      "precision": 1.0,
+      "precision_ci95": [
+        0.722,
+        1.0
+      ],
+      "recall": 1.0,
+      "recall_ci95": [
+        0.722,
+        1.0
+      ],
+      "abstentions": 6,
+      "accuracy_3way": 0.967,
+      "accuracy_3way_ci95": [
+        0.833,
+        0.994
+      ]
+    }
+  }
 }

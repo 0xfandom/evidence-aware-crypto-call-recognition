@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.97, "calls": [], "reasons": ["WARNING_NOT_BUY", "NEGATION_OF_BUY"], "limitations": ["Post explicitly warns against buying the contract address; no buy-side call present."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

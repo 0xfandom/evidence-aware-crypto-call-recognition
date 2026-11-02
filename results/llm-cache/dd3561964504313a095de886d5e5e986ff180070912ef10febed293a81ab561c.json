@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["QUESTION_NOT_CALL", "NO_AUTHOR_BUY_RECOMMENDATION"], "limitations": ["Post asks whether to buy $SOL, so it is a question, not an author buy call"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

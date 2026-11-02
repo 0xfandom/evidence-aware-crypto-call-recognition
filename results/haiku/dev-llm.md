@@ -15,8 +15,8 @@ n = 66 · gold labels {'BUY': 26, 'NO_NEW_BUY': 32, 'ABSTAIN': 8}
 | Accuracy when not abstaining | 0.983 |
 | Attribution errors on predicted BUY | none |
 | Decisions the guard corrected | 1 |
-| Cost | $0.0375 · 66 LLM calls · 0 cache hits · 208625 in / 28026 out tokens |
-| Latency per post | mean 5227.31 ms · p95 6638.9 ms · wall 90.02 s |
+| Cost | $0.0 · 0 LLM calls · 66 cache hits · 0 in / 0 out tokens |
+| Latency per post | mean 0.0 ms · p95 0.0 ms · wall 0.03 s |
 
 ## Confusion matrix (rows = gold, columns = predicted)
 
@@ -60,4 +60,4 @@ n = 66 · gold labels {'BUY': 26, 'NO_NEW_BUY': 32, 'ABSTAIN': 8}
 
 | source_id | gold | predicted | reasons | text |
 |---|---|---|---|---|
-| dev-telegram-0065 | ABSTAIN | NO_NEW_BUY | NO_BUY_SIDE_ACTION, FORECAST_ONLY_NO_ACQUIRE_INSTRUCTION | aKXgjUPmzUucYVWy3oZ4HSy55d2uruXoDLNejR8RhRmF 👀👀 chart looks primed |
+| dev-telegram-0065 | ABSTAIN | NO_NEW_BUY | MODEL:NO_BUY_SIDE_ACTION, MODEL:FORECAST_ONLY_NO_ACQUIRE_INSTRUCTION | aKXgjUPmzUucYVWy3oZ4HSy55d2uruXoDLNejR8RhRmF 👀👀 chart looks primed |

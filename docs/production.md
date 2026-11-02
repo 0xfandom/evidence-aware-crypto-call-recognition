@@ -58,10 +58,12 @@ Four independent versions, all stored on every decision (already in `Decision.ve
 ## 4. API cost and request-budget protection
 
 Already in the prototype:
-- the hybrid backend only calls the LLM when rules are unsure (posts with no asset
-  and no action never cost anything);
+- the hybrid backend skips the LLM only for posts the rules confidently rule out
+  (posts with no asset and no buy wording never cost anything); every rules BUY
+  is still confirmed by the LLM;
 - a per-post cap (`max_budget_usd` on the Agent SDK call);
-- a per-run cap (`RunBudget`): once spent, remaining posts `ABSTAIN` with
+- a per-run cap (`RunBudget`): each call in progress reserves the per-call cap,
+  so parallel calls cannot pass it; once reached, remaining posts `ABSTAIN` with
   `BUDGET_EXHAUSTED` instead of failing silently or overspending;
 - caching of unchanged posts.
 

@@ -1,0 +1,370 @@
+{
+  "backend": "rules",
+  "n": 40,
+  "label_distribution": {
+    "BUY": 14,
+    "NO_NEW_BUY": 18,
+    "ABSTAIN": 8
+  },
+  "confusion_gold_x_predicted": {
+    "BUY": {
+      "BUY": 8,
+      "NO_NEW_BUY": 6,
+      "ABSTAIN": 0
+    },
+    "NO_NEW_BUY": {
+      "BUY": 0,
+      "NO_NEW_BUY": 14,
+      "ABSTAIN": 4
+    },
+    "ABSTAIN": {
+      "BUY": 0,
+      "NO_NEW_BUY": 3,
+      "ABSTAIN": 5
+    }
+  },
+  "buy": {
+    "correct": 8,
+    "missed_as_no_new_buy": 6,
+    "missed_as_abstain": 0,
+    "false_buy": 0,
+    "false_buy_from_no_new_buy": 0,
+    "false_buy_from_abstain": 0,
+    "precision": 1.0,
+    "precision_ci95": [
+      0.676,
+      1.0
+    ],
+    "recall": 0.571,
+    "recall_ci95": [
+      0.326,
+      0.786
+    ]
+  },
+  "abstention": {
+    "count": 9,
+    "rate": 0.225,
+    "on_gold_abstain": 5,
+    "on_gold_buy": 0,
+    "on_gold_no_new_buy": 4
+  },
+  "accuracy_3way": 0.675,
+  "accuracy_3way_ci95": [
+    0.52,
+    0.799
+  ],
+  "accuracy_when_decided": 0.71,
+  "attribution_errors_on_predicted_buy": {
+    "asset_missed": 1,
+    "asset_extra": 1
+  },
+  "decisions_with_guard_corrections": 2,
+  "cost": {
+    "usd_total": 0.0,
+    "llm_calls": 0,
+    "cache_hits": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms_mean": 0.11,
+    "latency_ms_p95": 0.499,
+    "wall_seconds": 0.03
+  },
+  "by_tag": {
+    "conditional": {
+      "correct": 2,
+      "total": 2
+    },
+    "contract_address": {
+      "correct": 2,
+      "total": 3
+    },
+    "emoji": {
+      "correct": 8,
+      "total": 13
+    },
+    "existing_position": {
+      "correct": 2,
+      "total": 2
+    },
+    "explicit": {
+      "correct": 6,
+      "total": 7
+    },
+    "forecast": {
+      "correct": 3,
+      "total": 3
+    },
+    "generic_advice": {
+      "correct": 0,
+      "total": 1
+    },
+    "implicit": {
+      "correct": 7,
+      "total": 13
+    },
+    "joke": {
+      "correct": 0,
+      "total": 1
+    },
+    "long_post": {
+      "correct": 3,
+      "total": 3
+    },
+    "missing_author": {
+      "correct": 1,
+      "total": 2
+    },
+    "missing_source": {
+      "correct": 2,
+      "total": 2
+    },
+    "multi_asset": {
+      "correct": 3,
+      "total": 4
+    },
+    "negation": {
+      "correct": 3,
+      "total": 5
+    },
+    "no_asset": {
+      "correct": 2,
+      "total": 3
+    },
+    "non_english_mix": {
+      "correct": 1,
+      "total": 2
+    },
+    "promo": {
+      "correct": 2,
+      "total": 2
+    },
+    "question": {
+      "correct": 2,
+      "total": 2
+    },
+    "quote": {
+      "correct": 0,
+      "total": 3
+    },
+    "referral": {
+      "correct": 2,
+      "total": 2
+    },
+    "reply_context": {
+      "correct": 1,
+      "total": 3
+    },
+    "repost": {
+      "correct": 1,
+      "total": 1
+    },
+    "retrospective": {
+      "correct": 2,
+      "total": 2
+    },
+    "sarcasm": {
+      "correct": 0,
+      "total": 2
+    },
+    "slang": {
+      "correct": 5,
+      "total": 8
+    }
+  },
+  "mismatches": [
+    {
+      "source_id": "eval-x-0007",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.7,
+      "reasons": [
+        "NO_ASSET_NO_ACTION",
+        "WEAK_SPOT_CONTEXT_ASSET"
+      ],
+      "tags": [
+        "quote",
+        "emoji"
+      ],
+      "text": "hmm 👀"
+    },
+    {
+      "source_id": "eval-x-0012",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION"
+      ],
+      "tags": [
+        "sarcasm",
+        "joke",
+        "implicit"
+      ],
+      "text": "putting my rent money into $BONK tonight. what's the worst that could happen lmao"
+    },
+    {
+      "source_id": "eval-telegram-0013",
+      "gold": "NO_NEW_BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.5,
+      "reasons": [
+        "BUY_CUE_WITH_ASSET",
+        "WARNING_CONTEXT"
+      ],
+      "tags": [
+        "negation",
+        "contract_address",
+        "emoji"
+      ],
+      "text": "⚠️ SCAM ALERT ⚠️ 0x13877c3add83c48e2bc25e7872de5b077bb20aea is a honeypot. you can buy but you can't sell. do NOT ape this."
+    },
+    {
+      "source_id": "eval-x-0018",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.7,
+      "reasons": [
+        "NO_ASSET_NO_ACTION",
+        "WEAK_SPOT_CONTEXT_ASSET"
+      ],
+      "tags": [
+        "reply_context",
+        "emoji"
+      ],
+      "text": "we'll see 🤔"
+    },
+    {
+      "source_id": "eval-x-0020",
+      "gold": "NO_NEW_BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.4,
+      "reasons": [
+        "UNRESOLVED_ASSET"
+      ],
+      "tags": [
+        "generic_advice",
+        "no_asset",
+        "missing_author"
+      ],
+      "text": "Rule #1: buy the fear, sell the greed. DCA weekly and stop refreshing charts every 5 minutes."
+    },
+    {
+      "source_id": "eval-discord-0022",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION"
+      ],
+      "tags": [
+        "implicit",
+        "slang"
+      ],
+      "text": "yall sleepin on $GLORP lol. 400k mcap, im lodaing up evry dip till 2m"
+    },
+    {
+      "source_id": "eval-x-0025",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION"
+      ],
+      "tags": [
+        "reply_context",
+        "implicit"
+      ],
+      "text": "$SUI. no contest."
+    },
+    {
+      "source_id": "eval-x-0026",
+      "gold": "NO_NEW_BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.5,
+      "reasons": [
+        "QUOTE_STANCE_UNCLEAR",
+        "WEAK_SPOT_CONTEXT_ASSET"
+      ],
+      "tags": [
+        "quote",
+        "negation"
+      ],
+      "text": "lol no. this is exactly how you become exit liquidity."
+    },
+    {
+      "source_id": "eval-x-0028",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "RETROSPECTIVE",
+        "MARKET_TALK_WITHOUT_KNOWN_ASSET",
+        "WEAK_SPOT_CONTEXT_ASSET"
+      ],
+      "tags": [
+        "quote",
+        "implicit"
+      ],
+      "text": "100% with you on this one, just market bought a stack myself"
+    },
+    {
+      "source_id": "eval-discord-0034",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION"
+      ],
+      "tags": [
+        "implicit",
+        "slang"
+      ],
+      "text": "scaling in to $TIA here, 1/3 size now, rest under 4. cheap here imo"
+    },
+    {
+      "source_id": "eval-x-0035",
+      "gold": "NO_NEW_BUY",
+      "predicted": "ABSTAIN",
+      "confidence": 0.45,
+      "reasons": [
+        "POSSIBLE_SARCASM_OR_JOKE"
+      ],
+      "tags": [
+        "sarcasm",
+        "emoji"
+      ],
+      "text": "yes absolutely buy more $FTT, the old team is definitely coming back to fix everything 🤡🤡"
+    },
+    {
+      "source_id": "eval-x-0036",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION",
+        "WEAK_SPOT_MULTIPLE_ASSETS"
+      ],
+      "tags": [
+        "multi_asset",
+        "implicit"
+      ],
+      "text": "trimmed my $DOGE into strength, every cent of it going into $JUP. dog had its run, jup is the play now"
+    },
+    {
+      "source_id": "eval-x-0037",
+      "gold": "BUY",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.6,
+      "reasons": [
+        "ASSET_WITHOUT_RECOGNISED_ACTION"
+      ],
+      "tags": [
+        "explicit",
+        "non_english_mix",
+        "slang",
+        "emoji"
+      ],
+      "text": "bhai $PEPE abhi le lo, ye dip dobara nahi milega 🐸"
+    }
+  ]
+}

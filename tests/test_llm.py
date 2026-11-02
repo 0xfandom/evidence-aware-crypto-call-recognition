@@ -124,6 +124,37 @@ def test_hybrid_escalates_when_rules_are_unsure(monkeypatch, settings):
     assert decision.versions.backend == "hybrid:llm" and calls == ["t-1"]
 
 
+NOT_A_BUY_OUTPUT = {"label": "NO_NEW_BUY", "confidence": 0.9, "calls": [], "reasons": ["NOT_OWN_VOICE"],
+                    "limitations": []}
+
+# Posts the rules read as a confident BUY although they are not one (see test_rules.py).
+RULES_FALSE_BUYS = [
+    "Whales are buying $OP like crazy right now.",
+    "Everyone is buying $OP, I'm staying out.",
+    "Buying $OP at 2 was the best trade of my life.",
+    "My friend keeps telling me to buy $OP.",
+    "Buy $OP here. Just kidding, I hate it.",
+]
+
+
+@pytest.mark.parametrize("text", ["Buying $OP here", *RULES_FALSE_BUYS])
+def test_hybrid_never_accepts_a_rules_buy_without_the_llm(monkeypatch, settings, text):
+    calls = []
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(output=NOT_A_BUY_OUTPUT, calls=calls))
+    decision = run(classify, make_post(text), Backend.HYBRID, settings, RunBudget(1.0))
+    assert decision.versions.backend == "hybrid:llm" and len(calls) == 1
+    assert decision.label == Label.NO_NEW_BUY
+    assert "ESCALATED_FROM_RULES:BUY" in decision.reasons
+
+
+def test_hybrid_rules_buy_abstains_when_the_llm_fails(monkeypatch, settings):
+    async def broken(post, settings):
+        raise ConnectionError("network down")
+    monkeypatch.setattr(llm, "_call_agent_sdk", broken)
+    decision = run(classify, make_post("Buying $OP here"), Backend.HYBRID, settings, RunBudget(1.0))
+    assert decision.label == Label.ABSTAIN and "LLM_ERROR" in decision.reasons
+
+
 @pytest.mark.parametrize(
     "post",
     [
@@ -138,3 +169,54 @@ def test_hybrid_escalates_weak_spots_even_when_rules_look_confident(monkeypatch,
     monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(calls=calls))
     decision = run(classify, post, Backend.HYBRID, settings, RunBudget(1.0))
     assert decision.versions.backend == "hybrid:llm" and len(calls) == 1
+
+
+def test_model_written_text_never_reaches_the_output(monkeypatch, settings):
+    claims = {**GOOD_OUTPUT, "reasons": ["EXPLICIT", "token is verified!"],
+              "limitations": ["Token verified as the official mint."]}
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(output=claims))
+    decision = run(classify, make_post("Buying $OP here"), Backend.LLM, settings, RunBudget(1.0))
+    assert decision.label == Label.BUY
+    assert not any("verified as" in text for text in decision.limitations)
+    assert "MODEL:EXPLICIT" in decision.reasons and not any("verified" in r for r in decision.reasons)
+
+
+def test_hybrid_sends_market_talk_with_an_unknown_coin_to_the_llm(monkeypatch, settings):
+    calls = []
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(output=NOT_A_BUY_OUTPUT, calls=calls))
+    post = make_post("Kaspa looks like a gift at these levels, sizing up.")
+    decision = run(classify, post, Backend.HYBRID, settings, RunBudget(1.0))
+    assert decision.versions.backend == "hybrid:llm" and len(calls) == 1
+
+
+def test_parallel_calls_cannot_overspend_the_run_budget(monkeypatch, settings):
+    calls = []
+
+    async def slow_sdk(post, settings):
+        calls.append(post.source_id)
+        await anyio.sleep(0.01)
+        return GOOD_OUTPUT, Cost(usd=0.05, llm_calls=1)
+
+    monkeypatch.setattr(llm, "_call_agent_sdk", slow_sdk)
+    budget = RunBudget(limit_usd=0.10)
+
+    async def run_all():
+        async with anyio.create_task_group() as group:
+            for i in range(6):
+                group.start_soon(classify_with_llm, make_post(f"Buying $OP here {i}", source_id=f"p{i}"),
+                                 settings, budget)
+
+    anyio.run(run_all)
+    assert len(calls) == 2 and budget.spent_usd <= budget.limit_usd and budget.in_flight == 0
+
+
+def test_replay_serves_recorded_answers_and_never_calls_the_api(monkeypatch, settings):
+    calls = []
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(calls=calls))
+    recorded = make_post("Buying $OP here", source_id="p1")
+    run(classify_with_llm, recorded, settings, RunBudget(1.0))  # records one answer in the cache
+    replay = LlmSettings(model="test-model", cache_dir=settings.cache_dir, replay_only=True)
+    assert run(classify_with_llm, recorded, replay, RunBudget(1.0)).label == Label.BUY
+    missing = run(classify_with_llm, make_post("Buying $OP now", source_id="p2"), replay, RunBudget(1.0))
+    assert missing.label == Label.ABSTAIN and missing.reasons == ("NOT_IN_REPLAY_CACHE",)
+    assert calls == ["p1"]

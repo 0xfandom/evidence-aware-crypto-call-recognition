@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import tempfile
 import time
 from dataclasses import dataclass, field
@@ -27,6 +28,8 @@ DEFAULT_MAX_USD_PER_POST = 0.05
 DEFAULT_RUN_BUDGET_USD = 2.00
 DEFAULT_CACHE_DIR = Path(".cache/llm")
 TIMEOUT_SECONDS = 120
+MODEL_REASON_PREFIX = "MODEL:"
+_REASON_CODE = re.compile(r"[A-Z][A-Z0-9_]{0,47}")
 
 SYSTEM_PROMPT = resources.files("evidence_aware_crypto_call_recognition.prompts").joinpath("classify_v1.md").read_text()
 PROMPT_VERSION = "classify_v1@" + hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()[:12]
@@ -56,11 +59,18 @@ OUTPUT_SCHEMA = LlmOutput.model_json_schema()
 
 @dataclass
 class RunBudget:
-    """Shared across one run. Once spent, remaining posts abstain instead of calling the API."""
+    """Shared across one run. Once spent, remaining posts abstain instead of calling the API.
+
+    Each call in progress reserves the per-call cap, so parallel calls cannot together pass the limit.
+    """
 
     limit_usd: float
     spent_usd: float = 0.0
+    in_flight: int = 0
     _lock: anyio.Lock = field(default_factory=anyio.Lock)
+
+    def can_start(self, call_cap_usd: float) -> bool:
+        return self.spent_usd + (self.in_flight + 1) * call_cap_usd <= self.limit_usd
 
     @property
     def is_exhausted(self) -> bool:
@@ -73,6 +83,8 @@ class LlmSettings:
     max_usd_per_post: float = DEFAULT_MAX_USD_PER_POST
     run_budget_usd: float = DEFAULT_RUN_BUDGET_USD
     cache_dir: Path | None = DEFAULT_CACHE_DIR
+    # Answers come only from cache_dir; the API is never called. Lets anyone reproduce a recorded run.
+    replay_only: bool = False
 
     @classmethod
     def from_env(cls) -> LlmSettings:
@@ -105,6 +117,9 @@ def _abstain(reason: str, detail: str, settings: LlmSettings, cost: Cost | None 
 
 
 def _to_proposal(output: LlmOutput, settings: LlmSettings, cost: Cost) -> Proposal:
+    """The model's free text never reaches the output: a model-written limitation could claim a token is
+    verified. Its limitations are dropped (the cache keeps the raw answer) and its reason codes are kept
+    only when well-formed, marked as the model's."""
     return Proposal(
         label=Label(output.label),
         confidence=output.confidence,
@@ -113,8 +128,7 @@ def _to_proposal(output: LlmOutput, settings: LlmSettings, cost: Cost) -> Propos
                          c.conditional, c.condition_text)
             for c in output.calls
         ),
-        reasons=tuple(output.reasons),
-        limitations=tuple(output.limitations),
+        reasons=tuple(f"{MODEL_REASON_PREFIX}{r}" for r in output.reasons if _REASON_CODE.fullmatch(r)),
         cost=cost,
         backend="llm",
         model=settings.model,
@@ -168,23 +182,31 @@ async def classify_with_llm(post: Post, settings: LlmSettings, budget: RunBudget
         cached = json.loads(cache_file.read_text())
         output = LlmOutput.model_validate(cached["output"])
         return _to_proposal(output, settings, Cost(cache_hits=1))
+    if settings.replay_only:
+        return _abstain("NOT_IN_REPLAY_CACHE", f"No recorded answer for this post and model in {settings.cache_dir}; "
+                        "replay never calls the API.", settings)
 
     async with budget._lock:
-        if budget.is_exhausted:
-            return _abstain("BUDGET_EXHAUSTED", f"Run budget of ${budget.limit_usd:.2f} used up; post not sent to the LLM.",
-                            settings)
+        if not budget.can_start(settings.max_usd_per_post):
+            return _abstain("BUDGET_EXHAUSTED",
+                            f"Run budget of ${budget.limit_usd:.2f} reached (${budget.spent_usd:.4f} spent, "
+                            f"{budget.in_flight} call(s) in progress); post not sent to the LLM.", settings)
+        budget.in_flight += 1
 
+    spent_now = 0.0
     try:
         raw_output, cost = await _call_agent_sdk(post, settings)
+        spent_now = cost.usd
     except ImportError:
         return _abstain("LLM_UNAVAILABLE", "claude-agent-sdk is not installed (uv sync --extra llm).", settings)
     except TimeoutError:
         return _abstain("LLM_TIMEOUT", f"No answer within {TIMEOUT_SECONDS}s.", settings)
     except Exception as error:  # SDK, CLI, auth and network failures all end in ABSTAIN, with the cause kept
         return _abstain("LLM_ERROR", f"{type(error).__name__}: {str(error)[:300]}", settings)
-
-    async with budget._lock:
-        budget.spent_usd += cost.usd
+    finally:
+        async with budget._lock:  # release the reservation and book the real cost in one step
+            budget.in_flight -= 1
+            budget.spent_usd += spent_now
 
     try:
         output = LlmOutput.model_validate(raw_output)

@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.96, "calls": [], "reasons": ["GIVEAWAY_PITCH", "NO_BUY_SIDE_ACTION_ON_ASSET"], "limitations": ["The post is a giveaway with follow/RT/tag requirements, not an asset recommendation; no buy call is made for any token."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

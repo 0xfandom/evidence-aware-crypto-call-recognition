@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.9, "calls": [], "reasons": ["PRICE_FORECAST_ONLY", "NO_BUY_ACTION"], "limitations": ["Post contains a market-cap prediction for $SOL but no instruction to acquire it and no disclosed purchase."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

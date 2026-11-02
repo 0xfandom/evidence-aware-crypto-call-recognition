@@ -57,14 +57,14 @@
   "attribution_errors_on_predicted_buy": {},
   "decisions_with_guard_corrections": 1,
   "cost": {
-    "usd_total": 0.0375,
-    "llm_calls": 66,
-    "cache_hits": 0,
-    "input_tokens": 208625,
-    "output_tokens": 28026,
-    "latency_ms_mean": 5227.31,
-    "latency_ms_p95": 6638.9,
-    "wall_seconds": 90.02
+    "usd_total": 0.0,
+    "llm_calls": 0,
+    "cache_hits": 66,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms_mean": 0.0,
+    "latency_ms_p95": 0.0,
+    "wall_seconds": 0.03
   },
   "by_tag": {
     "conditional": {
@@ -175,8 +175,8 @@
       "predicted": "NO_NEW_BUY",
       "confidence": 0.8,
       "reasons": [
-        "NO_BUY_SIDE_ACTION",
-        "FORECAST_ONLY_NO_ACQUIRE_INSTRUCTION"
+        "MODEL:NO_BUY_SIDE_ACTION",
+        "MODEL:FORECAST_ONLY_NO_ACQUIRE_INSTRUCTION"
       ],
       "tags": [
         "contract_address",

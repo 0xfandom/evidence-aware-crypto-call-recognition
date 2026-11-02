@@ -1,0 +1,188 @@
+{
+  "backend": "llm",
+  "n": 40,
+  "label_distribution": {
+    "BUY": 14,
+    "NO_NEW_BUY": 18,
+    "ABSTAIN": 8
+  },
+  "confusion_gold_x_predicted": {
+    "BUY": {
+      "BUY": 14,
+      "NO_NEW_BUY": 0,
+      "ABSTAIN": 0
+    },
+    "NO_NEW_BUY": {
+      "BUY": 0,
+      "NO_NEW_BUY": 18,
+      "ABSTAIN": 0
+    },
+    "ABSTAIN": {
+      "BUY": 0,
+      "NO_NEW_BUY": 1,
+      "ABSTAIN": 7
+    }
+  },
+  "buy": {
+    "correct": 14,
+    "missed_as_no_new_buy": 0,
+    "missed_as_abstain": 0,
+    "false_buy": 0,
+    "false_buy_from_no_new_buy": 0,
+    "false_buy_from_abstain": 0,
+    "precision": 1.0,
+    "precision_ci95": [
+      0.785,
+      1.0
+    ],
+    "recall": 1.0,
+    "recall_ci95": [
+      0.785,
+      1.0
+    ]
+  },
+  "abstention": {
+    "count": 7,
+    "rate": 0.175,
+    "on_gold_abstain": 7,
+    "on_gold_buy": 0,
+    "on_gold_no_new_buy": 0
+  },
+  "accuracy_3way": 0.975,
+  "accuracy_3way_ci95": [
+    0.871,
+    0.996
+  ],
+  "accuracy_when_decided": 0.97,
+  "attribution_errors_on_predicted_buy": {},
+  "decisions_with_guard_corrections": 2,
+  "cost": {
+    "usd_total": 0.0,
+    "llm_calls": 0,
+    "cache_hits": 40,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms_mean": 0.0,
+    "latency_ms_p95": 0.0,
+    "wall_seconds": 0.03
+  },
+  "by_tag": {
+    "conditional": {
+      "correct": 2,
+      "total": 2
+    },
+    "contract_address": {
+      "correct": 3,
+      "total": 3
+    },
+    "emoji": {
+      "correct": 12,
+      "total": 13
+    },
+    "existing_position": {
+      "correct": 2,
+      "total": 2
+    },
+    "explicit": {
+      "correct": 7,
+      "total": 7
+    },
+    "forecast": {
+      "correct": 3,
+      "total": 3
+    },
+    "generic_advice": {
+      "correct": 1,
+      "total": 1
+    },
+    "implicit": {
+      "correct": 13,
+      "total": 13
+    },
+    "joke": {
+      "correct": 1,
+      "total": 1
+    },
+    "long_post": {
+      "correct": 3,
+      "total": 3
+    },
+    "missing_author": {
+      "correct": 2,
+      "total": 2
+    },
+    "missing_source": {
+      "correct": 2,
+      "total": 2
+    },
+    "multi_asset": {
+      "correct": 4,
+      "total": 4
+    },
+    "negation": {
+      "correct": 5,
+      "total": 5
+    },
+    "no_asset": {
+      "correct": 3,
+      "total": 3
+    },
+    "non_english_mix": {
+      "correct": 2,
+      "total": 2
+    },
+    "promo": {
+      "correct": 2,
+      "total": 2
+    },
+    "question": {
+      "correct": 2,
+      "total": 2
+    },
+    "quote": {
+      "correct": 3,
+      "total": 3
+    },
+    "referral": {
+      "correct": 2,
+      "total": 2
+    },
+    "reply_context": {
+      "correct": 2,
+      "total": 3
+    },
+    "repost": {
+      "correct": 1,
+      "total": 1
+    },
+    "retrospective": {
+      "correct": 2,
+      "total": 2
+    },
+    "sarcasm": {
+      "correct": 2,
+      "total": 2
+    },
+    "slang": {
+      "correct": 8,
+      "total": 8
+    }
+  },
+  "mismatches": [
+    {
+      "source_id": "eval-x-0018",
+      "gold": "ABSTAIN",
+      "predicted": "NO_NEW_BUY",
+      "confidence": 0.9,
+      "reasons": [
+        "NONCOMMITTAL_REPLY",
+        "NO_BUY_ACTION"
+      ],
+      "tags": [
+        "reply_context",
+        "emoji"
+      ],
+      "text": "we'll see 🤔"
+    }
+  ]
+}

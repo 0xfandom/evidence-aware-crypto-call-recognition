@@ -179,3 +179,11 @@ def test_model_written_text_never_reaches_the_output(monkeypatch, settings):
     assert decision.label == Label.BUY
     assert not any("verified as" in text for text in decision.limitations)
     assert "MODEL:EXPLICIT" in decision.reasons and not any("verified" in r for r in decision.reasons)
+
+
+def test_hybrid_sends_market_talk_with_an_unknown_coin_to_the_llm(monkeypatch, settings):
+    calls = []
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(output=NOT_A_BUY_OUTPUT, calls=calls))
+    post = make_post("Kaspa looks like a gift at these levels, sizing up.")
+    decision = run(classify, post, Backend.HYBRID, settings, RunBudget(1.0))
+    assert decision.versions.backend == "hybrid:llm" and len(calls) == 1

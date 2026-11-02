@@ -15,8 +15,8 @@ n = 40 · gold labels {'BUY': 14, 'NO_NEW_BUY': 18, 'ABSTAIN': 8}
 | Accuracy when not abstaining | 0.969 |
 | Attribution errors on predicted BUY | none |
 | Decisions the guard corrected | 2 |
-| Cost | $0.0 · 0 LLM calls · 31 cache hits · 0 in / 0 out tokens |
-| Latency per post | mean 0.02 ms · p95 0.098 ms · wall 0.04 s |
+| Cost | $0.0 · 0 LLM calls · 38 cache hits · 0 in / 0 out tokens |
+| Latency per post | mean 0.0 ms · p95 0.0 ms · wall 0.03 s |
 
 ## Confusion matrix (rows = gold, columns = predicted)
 

@@ -59,11 +59,11 @@
   "cost": {
     "usd_total": 0.0,
     "llm_calls": 0,
-    "cache_hits": 39,
+    "cache_hits": 45,
     "input_tokens": 0,
     "output_tokens": 0,
-    "latency_ms_mean": 0.03,
-    "latency_ms_p95": 0.121,
+    "latency_ms_mean": 0.0,
+    "latency_ms_p95": 0.016,
     "wall_seconds": 0.04
   },
   "by_tag": {

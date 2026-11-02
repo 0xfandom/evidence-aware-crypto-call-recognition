@@ -124,6 +124,37 @@ def test_hybrid_escalates_when_rules_are_unsure(monkeypatch, settings):
     assert decision.versions.backend == "hybrid:llm" and calls == ["t-1"]
 
 
+NOT_A_BUY_OUTPUT = {"label": "NO_NEW_BUY", "confidence": 0.9, "calls": [], "reasons": ["NOT_OWN_VOICE"],
+                    "limitations": []}
+
+# Posts the rules read as a confident BUY although they are not one (see test_rules.py).
+RULES_FALSE_BUYS = [
+    "Whales are buying $OP like crazy right now.",
+    "Everyone is buying $OP, I'm staying out.",
+    "Buying $OP at 2 was the best trade of my life.",
+    "My friend keeps telling me to buy $OP.",
+    "Buy $OP here. Just kidding, I hate it.",
+]
+
+
+@pytest.mark.parametrize("text", ["Buying $OP here", *RULES_FALSE_BUYS])
+def test_hybrid_never_accepts_a_rules_buy_without_the_llm(monkeypatch, settings, text):
+    calls = []
+    monkeypatch.setattr(llm, "_call_agent_sdk", fake_sdk(output=NOT_A_BUY_OUTPUT, calls=calls))
+    decision = run(classify, make_post(text), Backend.HYBRID, settings, RunBudget(1.0))
+    assert decision.versions.backend == "hybrid:llm" and len(calls) == 1
+    assert decision.label == Label.NO_NEW_BUY
+    assert "ESCALATED_FROM_RULES:BUY" in decision.reasons
+
+
+def test_hybrid_rules_buy_abstains_when_the_llm_fails(monkeypatch, settings):
+    async def broken(post, settings):
+        raise ConnectionError("network down")
+    monkeypatch.setattr(llm, "_call_agent_sdk", broken)
+    decision = run(classify, make_post("Buying $OP here"), Backend.HYBRID, settings, RunBudget(1.0))
+    assert decision.label == Label.ABSTAIN and "LLM_ERROR" in decision.reasons
+
+
 @pytest.mark.parametrize(
     "post",
     [

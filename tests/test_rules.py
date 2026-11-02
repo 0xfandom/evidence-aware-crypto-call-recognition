@@ -156,6 +156,23 @@ def test_misspelled_buy_verb():
     assert decide("im acumulating $OP evry red day").label == Label.BUY
 
 
+@pytest.mark.xfail(reason="Known rules limitation: own voice, tense and jokes are not understood; "
+                          "the hybrid sends every rules BUY to the LLM", strict=True)
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Whales are buying $OP like crazy right now.",
+        "Everyone is buying $OP, I'm staying out.",
+        "Buying $OP at 2 was the best trade of my life.",
+        "My friend keeps telling me to buy $OP.",
+        "Buy $OP here. Just kidding, I hate it.",
+    ],
+    ids=["others_buying", "author_staying_out", "past_trade", "someone_elses_call", "joke"],
+)
+def test_buy_cue_that_is_not_the_authors_current_call(text):
+    assert decide(text).label != Label.BUY
+
+
 @pytest.mark.xfail(reason="Known rules limitation: non-English buy instructions are not understood", strict=True)
 def test_non_english_buy_instruction():
     assert decide("$OP kharid lo abhi").label == Label.BUY

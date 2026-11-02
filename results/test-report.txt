@@ -1,14 +1,14 @@
 ============================= test session starts ==============================
-collected 95 items
+collected 107 items
 
-tests/test_api.py ..........                                             [ 10%]
-tests/test_assets.py .......                                             [ 17%]
-tests/test_cli.py .                                                      [ 18%]
-tests/test_contract.py ...                                               [ 22%]
-tests/test_evaluate.py ...                                               [ 25%]
-tests/test_guard.py .......................                              [ 49%]
-tests/test_live.py s                                                     [ 50%]
-tests/test_llm.py ..............                                         [ 65%]
-tests/test_rules.py ..........................xx.....                    [100%]
+tests/test_api.py ..........                                             [  9%]
+tests/test_assets.py .......                                             [ 15%]
+tests/test_cli.py .                                                      [ 16%]
+tests/test_contract.py ...                                               [ 19%]
+tests/test_evaluate.py ...                                               [ 22%]
+tests/test_guard.py .......................                              [ 43%]
+tests/test_live.py s                                                     [ 44%]
+tests/test_llm.py .....................                                  [ 64%]
+tests/test_rules.py ..........................xxxxxxx.....               [100%]
 
-=================== 92 passed, 1 skipped, 2 xfailed in 0.25s ===================
+=================== 99 passed, 1 skipped, 7 xfailed in 0.31s ===================

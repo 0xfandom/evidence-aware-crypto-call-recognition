@@ -16,7 +16,7 @@ n = 40 · gold labels {'BUY': 14, 'NO_NEW_BUY': 18, 'ABSTAIN': 8}
 | Attribution errors on predicted BUY | {'asset_missed': 1, 'asset_extra': 1} |
 | Decisions the guard corrected | 2 |
 | Cost | $0.0 · 0 LLM calls · 0 cache hits · 0 in / 0 out tokens |
-| Latency per post | mean 0.11 ms · p95 0.54 ms · wall 0.02 s |
+| Latency per post | mean 0.11 ms · p95 0.499 ms · wall 0.03 s |
 
 ## Confusion matrix (rows = gold, columns = predicted)
 
@@ -68,7 +68,7 @@ n = 40 · gold labels {'BUY': 14, 'NO_NEW_BUY': 18, 'ABSTAIN': 8}
 | eval-discord-0022 | BUY | NO_NEW_BUY | ASSET_WITHOUT_RECOGNISED_ACTION | yall sleepin on $GLORP lol. 400k mcap, im lodaing up evry dip till 2m |
 | eval-x-0025 | BUY | NO_NEW_BUY | ASSET_WITHOUT_RECOGNISED_ACTION | $SUI. no contest. |
 | eval-x-0026 | NO_NEW_BUY | ABSTAIN | QUOTE_STANCE_UNCLEAR, WEAK_SPOT_CONTEXT_ASSET | lol no. this is exactly how you become exit liquidity. |
-| eval-x-0028 | BUY | NO_NEW_BUY | RETROSPECTIVE, WEAK_SPOT_CONTEXT_ASSET | 100% with you on this one, just market bought a stack myself |
+| eval-x-0028 | BUY | NO_NEW_BUY | RETROSPECTIVE, MARKET_TALK_WITHOUT_KNOWN_ASSET, WEAK_SPOT_CONTEXT_ASSET | 100% with you on this one, just market bought a stack myself |
 | eval-discord-0034 | BUY | NO_NEW_BUY | ASSET_WITHOUT_RECOGNISED_ACTION | scaling in to $TIA here, 1/3 size now, rest under 4. cheap here imo |
 | eval-x-0035 | NO_NEW_BUY | ABSTAIN | POSSIBLE_SARCASM_OR_JOKE | yes absolutely buy more $FTT, the old team is definitely coming back to fix everything 🤡🤡 |
 | eval-x-0036 | BUY | NO_NEW_BUY | ASSET_WITHOUT_RECOGNISED_ACTION, WEAK_SPOT_MULTIPLE_ASSETS | trimmed my $DOGE into strength, every cent of it going into $JUP. dog had its run, jup is the play now |

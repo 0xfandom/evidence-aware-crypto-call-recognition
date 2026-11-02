@@ -15,8 +15,8 @@ n = 48 · gold labels {'BUY': 18, 'NO_NEW_BUY': 20, 'ABSTAIN': 10}
 | Accuracy when not abstaining | 0.949 |
 | Attribution errors on predicted BUY | none |
 | Decisions the guard corrected | 1 |
-| Cost | $0.0 · 0 LLM calls · 45 cache hits · 0 in / 0 out tokens |
-| Latency per post | mean 0.0 ms · p95 0.016 ms · wall 0.04 s |
+| Cost | $0.0 · 0 LLM calls · 46 cache hits · 0 in / 0 out tokens |
+| Latency per post | mean 0.0 ms · p95 0.0 ms · wall 0.03 s |
 
 ## Confusion matrix (rows = gold, columns = predicted)
 
@@ -25,6 +25,13 @@ n = 48 · gold labels {'BUY': 18, 'NO_NEW_BUY': 20, 'ABSTAIN': 10}
 | BUY | 17 | 0 | 1 |
 | NO_NEW_BUY | 0 | 20 | 0 |
 | ABSTAIN | 0 | 2 | 8 |
+
+## Split by tags: context_only_asset, payment_currency, warning
+
+| rows | n | BUY correct / gold | false BUY | BUY recall (95% CI) | abstentions | 3-way accuracy (95% CI) |
+|---|---|---|---|---|---|---|
+| with any of these tags | 18 | 7 / 8 | 0 | 0.875 (0.529, 0.978) | 3 | 0.889 (0.672, 0.969) |
+| without them | 30 | 10 / 10 | 0 | 1.0 (0.722, 1.0) | 6 | 0.967 (0.833, 0.994) |
 
 ## Accuracy by tag
 
@@ -63,6 +70,6 @@ n = 48 · gold labels {'BUY': 18, 'NO_NEW_BUY': 20, 'ABSTAIN': 10}
 
 | source_id | gold | predicted | reasons | text |
 |---|---|---|---|---|
-| ev2-x-1029 | ABSTAIN | NO_NEW_BUY | NO_BUY_ACTION, ATTENTION_EMOJI_ONLY, ESCALATED_FROM_RULES:NO_NEW_BUY | $SEI 👀👀👀 |
-| ev2-telegram-2006 | ABSTAIN | NO_NEW_BUY | VAGUE_HYPOTHETICAL, NO_BUY_SIDE_ACTION, PARENT_IS_OBSERVATION_NOT_PICK_REQUEST, ESCALATED_FROM_RULES:NO_NEW_BUY | ok this might be the one |
-| ev2-telegram-2016 | BUY | ABSTAIN | POSSIBLE_JOKE_OR_SARCASM, BUY_SIDE_WORDING_PRESENT, MEME_TONE, ESCALATED_FROM_RULES:ABSTAIN | paid 0.5 ETH for 2M $NOODL lol 🍜 bag secured, still buying under 2c |
+| ev2-x-1029 | ABSTAIN | NO_NEW_BUY | MODEL:NO_BUY_ACTION, MODEL:ATTENTION_EMOJI_ONLY, ESCALATED_FROM_RULES:NO_NEW_BUY | $SEI 👀👀👀 |
+| ev2-telegram-2006 | ABSTAIN | NO_NEW_BUY | MODEL:VAGUE_HYPOTHETICAL, MODEL:NO_BUY_SIDE_ACTION, MODEL:PARENT_IS_OBSERVATION_NOT_PICK_REQUEST, ESCALATED_FROM_RULES:NO_NEW_BUY | ok this might be the one |
+| ev2-telegram-2016 | BUY | ABSTAIN | MODEL:POSSIBLE_JOKE_OR_SARCASM, MODEL:BUY_SIDE_WORDING_PRESENT, MODEL:MEME_TONE, ESCALATED_FROM_RULES:ABSTAIN | paid 0.5 ETH for 2M $NOODL lol 🍜 bag secured, still buying under 2c |

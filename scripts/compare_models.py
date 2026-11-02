@@ -15,7 +15,7 @@ from pathlib import Path
 
 RESULTS = Path("results")
 MEASURED = json.loads((RESULTS / "measured_llm_costs.json").read_text())
-MODELS = {"opus-5.5": ("claude-opus-5-5", RESULTS), "haiku-5.5": ("claude-haiku-5-5", RESULTS / "haiku")}
+MODELS = {"opus-5.5": ("claude-opus-5-5", RESULTS / "opus"), "haiku-5.5": ("claude-haiku-5-5", RESULTS / "haiku")}
 
 
 def read_jsonl(path: Path) -> list[dict]:

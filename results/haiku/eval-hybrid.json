@@ -175,8 +175,8 @@
       "predicted": "NO_NEW_BUY",
       "confidence": 0.9,
       "reasons": [
-        "NON_COMMITTAL_REPLY",
-        "NO_EXPLICIT_BUY_ACTION",
+        "MODEL:NON_COMMITTAL_REPLY",
+        "MODEL:NO_EXPLICIT_BUY_ACTION",
         "ESCALATED_FROM_RULES:NO_NEW_BUY"
       ],
       "tags": [
@@ -191,9 +191,9 @@
       "predicted": "ABSTAIN",
       "confidence": 0.7,
       "reasons": [
-        "POSSIBLE_SARCASM",
-        "CLOWN_EMOJI_MOCKERY_SIGNAL",
-        "ABSURD_CLAIM_ABOUT_OLD_TEAM",
+        "MODEL:POSSIBLE_SARCASM",
+        "MODEL:CLOWN_EMOJI_MOCKERY_SIGNAL",
+        "MODEL:ABSURD_CLAIM_ABOUT_OLD_TEAM",
         "ESCALATED_FROM_RULES:ABSTAIN"
       ],
       "tags": [

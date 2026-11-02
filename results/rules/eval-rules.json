@@ -66,8 +66,8 @@
     "input_tokens": 0,
     "output_tokens": 0,
     "latency_ms_mean": 0.11,
-    "latency_ms_p95": 0.54,
-    "wall_seconds": 0.02
+    "latency_ms_p95": 0.499,
+    "wall_seconds": 0.03
   },
   "by_tag": {
     "conditional": {
@@ -295,9 +295,10 @@
       "source_id": "eval-x-0028",
       "gold": "BUY",
       "predicted": "NO_NEW_BUY",
-      "confidence": 0.7,
+      "confidence": 0.6,
       "reasons": [
         "RETROSPECTIVE",
+        "MARKET_TALK_WITHOUT_KNOWN_ASSET",
         "WEAK_SPOT_CONTEXT_ASSET"
       ],
       "tags": [

@@ -16,7 +16,7 @@ n = 48 · gold labels {'BUY': 18, 'NO_NEW_BUY': 20, 'ABSTAIN': 10}
 | Attribution errors on predicted BUY | {'asset_extra': 1} |
 | Decisions the guard corrected | 1 |
 | Cost | $0.0 · 0 LLM calls · 0 cache hits · 0 in / 0 out tokens |
-| Latency per post | mean 0.09 ms · p95 0.199 ms · wall 0.03 s |
+| Latency per post | mean 0.1 ms · p95 0.217 ms · wall 0.03 s |
 
 ## Confusion matrix (rows = gold, columns = predicted)
 
@@ -25,6 +25,13 @@ n = 48 · gold labels {'BUY': 18, 'NO_NEW_BUY': 20, 'ABSTAIN': 10}
 | BUY | 12 | 2 | 4 |
 | NO_NEW_BUY | 0 | 17 | 3 |
 | ABSTAIN | 0 | 2 | 8 |
+
+## Split by tags: context_only_asset, payment_currency, warning
+
+| rows | n | BUY correct / gold | false BUY | BUY recall (95% CI) | abstentions | 3-way accuracy (95% CI) |
+|---|---|---|---|---|---|---|
+| with any of these tags | 18 | 3 / 8 | 0 | 0.375 (0.137, 0.694) | 9 | 0.5 (0.29, 0.71) |
+| without them | 30 | 9 / 10 | 0 | 0.9 (0.596, 0.982) | 6 | 0.933 (0.787, 0.982) |
 
 ## Accuracy by tag
 
@@ -65,7 +72,7 @@ n = 48 · gold labels {'BUY': 18, 'NO_NEW_BUY': 20, 'ABSTAIN': 10}
 |---|---|---|---|---|
 | ev2-telegram-1009 | BUY | NO_NEW_BUY | ASSET_WITHOUT_RECOGNISED_ACTION | bhai $DOGE abhi le lo, 0.10 pe bahut sasta hai. baad mein mat rona 😅 |
 | ev2-x-1029 | ABSTAIN | NO_NEW_BUY | ASSET_WITHOUT_RECOGNISED_ACTION | $SEI 👀👀👀 |
-| ev2-discord-2002 | BUY | NO_NEW_BUY | RETROSPECTIVE, WEAK_SPOT_CONTEXT_ASSET | yes. bought more this morning and still bidding below here |
+| ev2-discord-2002 | BUY | NO_NEW_BUY | RETROSPECTIVE, MARKET_TALK_WITHOUT_KNOWN_ASSET, WEAK_SPOT_CONTEXT_ASSET | yes. bought more this morning and still bidding below here |
 | ev2-x-2004 | NO_NEW_BUY | ABSTAIN | QUOTE_STANCE_UNCLEAR, WEAK_SPOT_CONTEXT_ASSET | Not touching this. Team wallet holds 40% of supply. |
 | ev2-telegram-2006 | ABSTAIN | NO_NEW_BUY | NO_ASSET_NO_ACTION, WEAK_SPOT_CONTEXT_ASSET | ok this might be the one |
 | ev2-x-2007 | NO_NEW_BUY | ABSTAIN | BUY_CUE_WITH_ASSET, WARNING_CONTEXT | ⚠️ $GLOOM is a honeypot. You can buy but you cannot sell. Sell function blacklists every non-team wallet. Stay away. |

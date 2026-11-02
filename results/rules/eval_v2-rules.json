@@ -64,8 +64,8 @@
     "cache_hits": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "latency_ms_mean": 0.09,
-    "latency_ms_p95": 0.199,
+    "latency_ms_mean": 0.1,
+    "latency_ms_p95": 0.217,
     "wall_seconds": 0.03
   },
   "by_tag": {
@@ -215,9 +215,10 @@
       "source_id": "ev2-discord-2002",
       "gold": "BUY",
       "predicted": "NO_NEW_BUY",
-      "confidence": 0.7,
+      "confidence": 0.6,
       "reasons": [
         "RETROSPECTIVE",
+        "MARKET_TALK_WITHOUT_KNOWN_ASSET",
         "WEAK_SPOT_CONTEXT_ASSET"
       ],
       "tags": [
@@ -354,5 +355,56 @@
       ],
       "text": "paid 0.5 ETH for 2M $NOODL lol 🍜 bag secured, still buying under 2c"
     }
-  ]
+  ],
+  "tag_split": {
+    "tags": [
+      "context_only_asset",
+      "payment_currency",
+      "warning"
+    ],
+    "tagged": {
+      "n": 18,
+      "gold_buy": 8,
+      "buy_correct": 3,
+      "false_buy": 0,
+      "precision": 1.0,
+      "precision_ci95": [
+        0.438,
+        1.0
+      ],
+      "recall": 0.375,
+      "recall_ci95": [
+        0.137,
+        0.694
+      ],
+      "abstentions": 9,
+      "accuracy_3way": 0.5,
+      "accuracy_3way_ci95": [
+        0.29,
+        0.71
+      ]
+    },
+    "untagged": {
+      "n": 30,
+      "gold_buy": 10,
+      "buy_correct": 9,
+      "false_buy": 0,
+      "precision": 1.0,
+      "precision_ci95": [
+        0.701,
+        1.0
+      ],
+      "recall": 0.9,
+      "recall_ci95": [
+        0.596,
+        0.982
+      ],
+      "abstentions": 6,
+      "accuracy_3way": 0.933,
+      "accuracy_3way_ci95": [
+        0.787,
+        0.982
+      ]
+    }
+  }
 }

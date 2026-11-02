@@ -62,7 +62,8 @@ Already in the prototype:
   (posts with no asset and no buy wording never cost anything); every rules BUY
   is still confirmed by the LLM;
 - a per-post cap (`max_budget_usd` on the Agent SDK call);
-- a per-run cap (`RunBudget`): once spent, remaining posts `ABSTAIN` with
+- a per-run cap (`RunBudget`): each call in progress reserves the per-call cap,
+  so parallel calls cannot pass it; once reached, remaining posts `ABSTAIN` with
   `BUDGET_EXHAUSTED` instead of failing silently or overspending;
 - caching of unchanged posts.
 

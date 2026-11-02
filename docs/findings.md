@@ -20,7 +20,7 @@
   datasets do not contain ("whales are buying", past trades, "just kidding").
   So the hybrid now never accepts a rules BUY: the rules may only rule a post
   out, and Claude confirms every BUY.
-- **On this data the hybrid saves little.** It sends 45 of 48 held-out posts to
+- **On this data the hybrid saves little.** It sends 46 of 48 held-out posts to
   Claude ($0.026 vs $0.027 for every post). The saving depends on how much
   real traffic is everyday chatter with no asset and no buy wording.
 - **Haiku costs about 1/20 of Opus** ($0.0006 vs $0.012 per post) with no loss
@@ -36,13 +36,14 @@ was frozen.
 | Backend | Model | BUY correct | Missed | False BUY | Precision [95% CI] | Recall [95% CI] | Attribution errors | LLM calls | Cost |
 |---|---|---|---|---|---|---|---|---|---|
 | rules | — | 12 | 6 | 0 | 1.00 [0.76, 1.00] | 0.67 [0.44, 0.84] | 1 | 0 | $0 |
-| **hybrid (default)** | **Haiku** | **17** | **1** | **0** | **1.00 [0.82, 1.00]** | **0.94 [0.74, 0.99]** | **0** | 45 | **$0.026** |
+| **hybrid (default)** | **Haiku** | **17** | **1** | **0** | **1.00 [0.82, 1.00]** | **0.94 [0.74, 0.99]** | **0** | 46 | **$0.026** |
 | llm | Haiku | 17 | 1 | 0 | 1.00 [0.82, 1.00] | 0.94 [0.74, 0.99] | 0 | 48 | $0.027 |
 
 - **Hybrid rule changed after the held-out runs.** Every rules BUY now goes to
-  Claude. The change came from new probe posts, not from `eval_v2` errors, and
-  the Haiku results above did not change; only the number of LLM calls rose
-  (39 → 45). They were re-run from cached answers, at no cost.
+  Claude, and so does market talk that names no asset the rules know. Both
+  changes, and a stricter evidence guard, came from new probe posts, not from
+  `eval_v2` errors. No label changed on any dataset; only the number of LLM
+  calls rose (39 → 46). They were re-run from recorded answers, at no cost.
 - **Opus is not in this table** because it was measured on an earlier prompt
   and the earlier hybrid rule. Its results are in "Model tier" below.
 - **Haiku's one miss** is a real BUY written with "lol", which went to ABSTAIN as
@@ -51,7 +52,20 @@ was frozen.
   ticker with emoji. Whether such posts deserve review is a policy question.
 - **Speed:** about 5–6.5 s per LLM post, most of it Agent SDK start-up. The rules
   take under 1 ms.
-- **Reproduce:** `uv run eacr eval data/eval_v2.jsonl --backend hybrid`, and
+- **Targeted vs general rows.** 18 of the 48 posts were written around known
+  failure types (`context_only_asset`, `warning`, `payment_currency`), the same
+  weak spots the escalation rule handles, so they flatter the hybrid. Read apart
+  (`--split-tags`):
+
+  | Rows | Gold BUYs | Rules: BUY found | Haiku hybrid: BUY found | False BUY (both) |
+  |---|---|---|---|---|
+  | 30 general | 10 | 9 | 10 | 0 |
+  | 18 targeted | 8 | 3 | 7 | 0 |
+
+  On general rows the hybrid adds one BUY over the rules; most of its gain is on
+  the targeted rows. With 10 and 8 gold BUYs, neither recall figure is precise.
+- **Reproduce:** `uv run eacr eval data/eval_v2.jsonl --backend hybrid --replay results/llm-cache`
+  (offline, from the recorded answers; drop `--replay` to call Claude), and
   `uv run python scripts/compare_models.py` for the full model table on all three
   datasets. Real costs come from `results/measured_llm_costs.json`, recorded on
   uncached runs, because reports that replay cached answers show $0.
@@ -63,7 +77,7 @@ current prompt (`classify_v1@0ed51e26f8cb`). Opus was measured on the previous
 prompt (`classify_v1@62c84cdedae0`), which differed only in three clarifications:
 the quote must name its asset, `condition_text` is copied from the post, and the
 `kind` field is explained. Opus was not re-run, to avoid about $2 of repeat cost.
-Its hybrid reports in `results/` also use the earlier hybrid rule, which let
+Its hybrid reports in `results/opus/` also use the earlier hybrid rule, which let
 confident rules BUYs skip Claude; its llm reports are not affected by that.
 
 | Set | Model | BUY correct / gold | False BUY | 3-way accuracy | Cost / LLM post | Latency / LLM post |
@@ -88,8 +102,13 @@ confident rules BUYs skip Claude; its llm reports are not affected by that.
    testable rule and exposed four product questions the business must answer
    (paid promos, conditional calls, leveraged longs, unattributed BUYs).
 2. **Separate what the model proposes from what the system accepts.** The
-   guard turns "the model should not invent evidence" into "the system cannot
-   output invented or irrelevant evidence", and records every correction.
+   guard turns "the model should not invent evidence" into "the system drops
+   evidence, assets and conditions that are not in the post", keeps the model's
+   own sentences out of the output, and records every correction. A review
+   found four gaps in the first version (substring asset matching, unchecked
+   condition text, model-written limitations, bare-ticker quotes); all are now
+   closed and tested. The guard still cannot tell whether a quote expresses a
+   buy; that is measured, not guaranteed.
 3. **Never let the cheap stage give the risky answer.** A confident wrong rule
    decision never reaches the model. Escalating on the post's shape helped, but
    a review still found confident wrong rules BUYs. The lasting fix is
@@ -127,6 +146,8 @@ confident rules BUYs skip Claude; its llm reports are not affected by that.
   post is used.
 - **Thin action detail.** Entry, target, stop and timeframe are not extracted.
 - **Rule weak spots** (covered by the LLM, documented by tests):
+  - buy wording that is not the author's current call ("whales are buying",
+    past trades, "just kidding"), which is why the hybrid never accepts a rules BUY;
   - typos and non-English calls;
   - any "if" marks a call as conditional;
   - an undisclosed shill reads as a buy.

@@ -224,15 +224,5 @@ data/                                          synthetic development and held-ou
 docs/                                          policy, architecture, findings, production plan
 results/                                       committed reports (rules, haiku, opus), recorded Claude answers, measured costs
 scripts/                                       model comparison table
+assets/                                        demo video
 ```
-
-## Documentation
-
-| Document | Contents |
-|---|---|
-| [`docs/solution.md`](docs/solution.md) | How each of the brief's five challenges is handled, with evidence |
-| [`docs/labeling_policy.md`](docs/labeling_policy.md) | What counts as BUY: the rules everything else follows |
-| [`docs/architecture.md`](docs/architecture.md) | Pipeline, input/output contract, evidence guarantees, decisions |
-| [`docs/findings.md`](docs/findings.md) | Results, limitations, next steps |
-| [`docs/production.md`](docs/production.md) | Path to a production pipeline |
-| [`data/README.md`](data/README.md) | How the datasets were made |

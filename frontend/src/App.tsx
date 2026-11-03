@@ -35,7 +35,7 @@ const EXAMPLES: { name: string; slug: string; draft: Partial<Draft> }[] = [
 
 const BACKENDS: { value: Backend; name: string; hint: string }[] = [
   { value: "rules", name: "Rules", hint: "Offline and free" },
-  { value: "hybrid", name: "Hybrid", hint: "Asks Claude only when the rules are unsure" },
+  { value: "hybrid", name: "Hybrid", hint: "Rules can only rule a post out; Claude confirms every possible BUY" },
   { value: "llm", name: "Claude", hint: "Every post goes to Claude" },
 ];
 

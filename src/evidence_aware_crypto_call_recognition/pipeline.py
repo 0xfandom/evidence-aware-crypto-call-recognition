@@ -13,7 +13,7 @@ from evidence_aware_crypto_call_recognition.llm import LlmSettings, RunBudget, c
 from evidence_aware_crypto_call_recognition.proposal import Proposal
 from evidence_aware_crypto_call_recognition.rules import classify_with_rules
 
-# Rules decide alone only when they are confident; everything else goes to the LLM.
+# Rules decide alone only on a confident NO_NEW_BUY; everything else goes to the LLM.
 HYBRID_ESCALATE_BELOW = 0.8
 
 
@@ -36,7 +36,9 @@ async def propose(post: Post, backend: Backend, settings: LlmSettings, budget: R
         return await classify_with_llm(post, settings, budget)
 
     rules = _timed_rules(post)
-    if rules.label != Label.ABSTAIN and rules.confidence >= HYBRID_ESCALATE_BELOW:
+    # Rules may settle a post only as NO_NEW_BUY. A rules BUY is never final: the cue
+    # lexicon cannot tell own voice, tense or jokes apart, so the LLM confirms every BUY.
+    if rules.label == Label.NO_NEW_BUY and rules.confidence >= HYBRID_ESCALATE_BELOW:
         return replace(rules, backend="hybrid:rules")
     llm = await classify_with_llm(post, settings, budget)
     return replace(llm, backend="hybrid:llm", reasons=llm.reasons + (f"ESCALATED_FROM_RULES:{rules.label.value}",))

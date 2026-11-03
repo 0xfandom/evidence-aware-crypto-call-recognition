@@ -15,8 +15,8 @@ n = 40 · gold labels {'BUY': 14, 'NO_NEW_BUY': 18, 'ABSTAIN': 8}
 | Accuracy when not abstaining | 0.969 |
 | Attribution errors on predicted BUY | none |
 | Decisions the guard corrected | 2 |
-| Cost | $0.0236 · 40 LLM calls · 0 cache hits · 127563 in / 17941 out tokens |
-| Latency per post | mean 5318.22 ms · p95 6578.8 ms · wall 55.95 s |
+| Cost | $0.0 · 0 LLM calls · 40 cache hits · 0 in / 0 out tokens |
+| Latency per post | mean 0.0 ms · p95 0.0 ms · wall 0.03 s |
 
 ## Confusion matrix (rows = gold, columns = predicted)
 
@@ -60,5 +60,5 @@ n = 40 · gold labels {'BUY': 14, 'NO_NEW_BUY': 18, 'ABSTAIN': 8}
 
 | source_id | gold | predicted | reasons | text |
 |---|---|---|---|---|
-| eval-x-0018 | ABSTAIN | NO_NEW_BUY | NON_COMMITTAL_REPLY, NO_EXPLICIT_BUY_ACTION | we'll see 🤔 |
-| eval-x-0035 | NO_NEW_BUY | ABSTAIN | POSSIBLE_SARCASM, CLOWN_EMOJI_MOCKERY_SIGNAL, ABSURD_CLAIM_ABOUT_OLD_TEAM | yes absolutely buy more $FTT, the old team is definitely coming back to fix everything 🤡🤡 |
+| eval-x-0018 | ABSTAIN | NO_NEW_BUY | MODEL:NON_COMMITTAL_REPLY, MODEL:NO_EXPLICIT_BUY_ACTION | we'll see 🤔 |
+| eval-x-0035 | NO_NEW_BUY | ABSTAIN | MODEL:POSSIBLE_SARCASM, MODEL:CLOWN_EMOJI_MOCKERY_SIGNAL, MODEL:ABSURD_CLAIM_ABOUT_OLD_TEAM | yes absolutely buy more $FTT, the old team is definitely coming back to fix everything 🤡🤡 |

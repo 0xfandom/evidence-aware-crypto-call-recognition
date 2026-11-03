@@ -21,11 +21,11 @@
 |---|---|
 | `contract.py` | Input/output schema, policy version, content hash |
 | `assets.py` | Finds tickers, known names and contract addresses exactly as written |
-| `rules.py` | Offline recogniser: sentence-level buy/sell/negation/retro/hedge cues, quote and reply handling, risk flags (promo, sarcasm, warnings) that force `ABSTAIN`, and weak-spot detection that caps confidence so the hybrid escalates |
-| `llm.py` | Claude Agent SDK call: tools disabled, user settings not loaded, JSON-schema output, per-post and per-run budget, cache, every failure → `ABSTAIN` |
-| `pipeline.py` | `rules`, `llm`, `hybrid` (rules decide when confident ≥ 0.8 and no weak spot is flagged; otherwise escalate to the LLM) |
+| `rules.py` | Offline recogniser: sentence-level buy/sell/negation/retro/hedge cues, quote and reply handling, risk flags (promo, sarcasm, warnings) that force `ABSTAIN`, weak-spot detection that caps confidence so the hybrid escalates, and low confidence for market talk with no known asset |
+| `llm.py` | Claude Agent SDK call: tools disabled, user settings not loaded, JSON-schema output, per-post cap and a per-run budget that reserves the cap for calls in progress, cache, replay-only mode, every failure → `ABSTAIN` |
+| `pipeline.py` | `rules`, `llm`, `hybrid` (rules decide alone only on `NO_NEW_BUY` with confidence ≥ 0.8; every rules BUY, every weak spot and everything else goes to the LLM) |
 | `guard.py` | Evidence integrity, confidence floor, manual-input marker, limitations |
-| `evaluate.py` | Metrics, Wilson confidence intervals, independent re-check of attribution |
+| `evaluate.py` | Metrics, Wilson confidence intervals, independent re-check of attribution, optional split by gold tags |
 | `api.py` | HTTP API (FastAPI) and the web UI mount; same pipeline, cache and budgets as the CLI |
 | `cli.py` | `eacr classify`, `eacr eval`, `eacr serve` |
 | `web/static/` | Pre-built React + Tailwind UI (source in `frontend/`) |
@@ -85,10 +85,22 @@ Enforced in `guard.py` and tested in `tests/test_guard.py`:
 - `supporting_text` must appear **verbatim** in the post, parent or quoted text,
   and must **mention its asset**: in the quoted sentence or the one before it, or,
   for a reply or quote, in the post being answered when only that post names it.
-  Otherwise the call is dropped.
-- An asset must be **written in the text**; an invented ticker or address is
-  dropped. `asset.verified` is typed `Literal[False]`, so the prototype cannot
-  claim a verified token identity even by mistake.
+  It must also be **more than the bare ticker** ("$SOL" alone is not evidence of
+  a buy), except in a reply or quote, where the post being answered carries the
+  action. Otherwise the call is dropped.
+- An asset must be **written in the text as a whole word**; an invented ticker
+  or address is dropped ("ETH" is not found in "something").
+  `asset.verified` is typed `Literal[False]`, so the prototype cannot claim a
+  verified token identity even by mistake.
+- `condition_text` must be copied **verbatim** from the source; otherwise it is
+  replaced by the supporting text and the change is recorded.
+- **Model-written text never reaches the output.** The LLM's free-text
+  limitations are dropped (the cache keeps the raw answer for audit); its reason
+  codes are kept only when well-formed and are marked `MODEL:`. Every limitation
+  in a decision is written by our code.
+- What the guard proves is that evidence is quoted, about its asset and not
+  invented. It does **not** prove that the quote expresses a buy: that is the
+  classifier's job, and it is what the evaluation measures.
 - Text pasted into the API without a source id gets the marker `manual:<hash>`,
   `source.is_manual_input: true` and a limitation that it must not be used for
   scoring. Posts submitted as JSON without a source id abstain.
@@ -110,8 +122,8 @@ deterministic guard behind both.**
   precision but lose recall.
 - **Why a guard after the model.** An LLM can paraphrase evidence, normalise
   "Solana" to a contract, or invent a ticker. Prompts reduce this; only code can
-  guarantee it. The guard makes invented evidence impossible to output, and
-  counts how often the model tried.
+  guarantee it. The guard blocks evidence, assets and conditions that are not
+  in the post, and counts how often the model produced them.
 - **Why `ABSTAIN` is easy to reach.** A false BUY damages a real person's score;
   an abstention costs one review. Promotions, possible sarcasm, unresolved
   assets, unclear quote stance, low confidence and every backend failure all

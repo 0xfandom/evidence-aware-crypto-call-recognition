@@ -39,6 +39,8 @@ The package installs two equivalent commands: `eacr` and
 ```bash
 uv run pytest                                # run the test suite
 uv run eacr eval data/eval_v2.jsonl          # evaluate on the held-out set
+uv run eacr eval data/eval_v2.jsonl --backend hybrid --replay results/llm-cache
+                                             # reproduce the Claude results offline, no account needed
 uv run eacr classify posts.jsonl             # classify posts (a JSONL file, or - for stdin)
 uv run eacr serve                            # web UI at http://127.0.0.1:8000, API docs at /docs
 ```
@@ -89,7 +91,8 @@ Each input line is a post (as above) or a dataset row
 ```
 
 The report also covers abstentions, attribution errors, cost and latency, a
-confusion matrix and accuracy per case type.
+confusion matrix and accuracy per case type. `--split-tags TAG,TAG` adds the
+same figures for rows with any of those gold tags and for the rest.
 
 ## Web UI and API
 
@@ -122,8 +125,9 @@ uv run eacr serve            # add --port 8765 to change the port
 
 ## Using Claude (optional)
 
-`--backend llm` sends every post to Claude; `--backend hybrid` sends only the
-posts the rules are unsure about. Both use the
+`--backend llm` sends every post to Claude; `--backend hybrid` lets the rules
+settle only clear non-calls and sends everything else, including every rules
+BUY, to Claude. Both use the
 [Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk), which ships its
 own CLI, so nothing else needs installing.
 
@@ -145,11 +149,19 @@ Optional settings (defaults shown in `.env.example`):
 |---|---|---|
 | `EACR_MODEL` / `--model` | `claude-haiku-5-5` | Claude model |
 | `EACR_MAX_BUDGET_USD_PER_POST` | `0.05` | Hard cost cap per call |
-| `EACR_RUN_BUDGET_USD` / `--run-budget` | `2.00` | Cap per run; once spent, remaining posts abstain |
+| `EACR_RUN_BUDGET_USD` / `--run-budget` | `2.00` | Cap per run; each call in progress reserves the per-call cap, so parallel calls cannot pass it; once reached, remaining posts abstain |
 
 - **Cache:** answers are cached in `.cache/llm/` by post, model, prompt and
   policy, so an unchanged post is never paid for twice. Use `--no-cache` to
   disable it.
+- **Replay:** `--replay results/llm-cache` uses only the recorded Haiku answers
+  committed in the repo and never calls the API, so the Claude results can be
+  checked without an account. A post with no recorded answer abstains with
+  `NOT_IN_REPLAY_CACHE`.
+- **Cost of this project:** all Claude runs used the author's own account and
+  cost about $2.35 in total, covering every evaluation, test and demo run. No
+  Vertrauen credentials, data or budget were used. The default rules path and
+  the replay need no API access at all.
 - **Live test:** `EACR_LIVE=1 uv run pytest -m live` makes one real call, for
   under $0.01.
 - `.env` is git-ignored; never commit a credential.
@@ -160,15 +172,19 @@ Optional settings (defaults shown in `.env.example`):
 Post ──▶ classifier proposes (rules | llm | hybrid) ──▶ evidence guard checks ──▶ Decision
 ```
 
-- **Rules:** offline and instant. They settle obvious posts, and flag known
-  weak spots (an asset named only in a quoted post, scam warnings, several
-  assets) so the hybrid sends those to Claude.
+- **Rules:** offline and instant. In the hybrid they may only rule a post out
+  (no buy call). A rules BUY is never final: Claude must confirm it, because
+  buy wording alone cannot tell "I'm buying" from "whales are buying" or a
+  past trade. Known weak spots (an asset named only in a quoted post, scam
+  warnings, several assets) also always go to Claude.
 - **Claude:** reads implicit, slang, typo and non-English calls. It never sees
   the author or source id, and any failure becomes `ABSTAIN`.
 - **Evidence guard:** every proposed call must quote the post word for word,
-  and the quote must mention its asset. The asset must be written in the post,
-  source and author come from input metadata only, and `verified` is always
-  `false`. The guard can only drop or downgrade, never add.
+  and the quote must mention its asset and be more than the bare ticker. The
+  asset must be written in the post as a whole word, a condition must be copied
+  from the post, source and author come from input metadata only, and
+  `verified` is always `false`. Text the model writes itself (its limitations)
+  never reaches the output. The guard can only drop or downgrade, never add.
 
 Design decisions and rejected alternatives are in
 [`docs/architecture.md`](docs/architecture.md).
@@ -180,17 +196,22 @@ Held-out set `data/eval_v2.jsonl`: 48 synthetic posts, 18 of them real BUYs.
 | Classifier | Model | BUY correct | False BUY | Attribution errors | Cost | Latency per post |
 |---|---|---|---|---|---|---|
 | rules | — | 12 / 18 | 0 | 1 | $0 | under 1 ms |
-| **hybrid** | **Haiku 5.5 (default)** | **17 / 18** | **0** | **0** | **$0.022** | about 5 s when sent to Claude |
-| hybrid | Opus 5.5 | 18 / 18 | 0 | 0 | $0.451 | about 5 s when sent to Claude |
+| **hybrid** | **Haiku 5.5 (default)** | **17 / 18** | **0** | **0** | **$0.026** | about 5 s when sent to Claude |
 
 - No Claude run produced a false BUY or invented evidence.
-- Haiku was measured on the current prompt; Opus on the previous prompt version,
-  which differed only in three clarifications (see [`docs/findings.md`](docs/findings.md)).
+- On this data the hybrid sends 46 of 48 posts to Claude, so it saves little
+  over `--backend llm` ($0.027). The saving comes from everyday posts with no
+  asset and no buy wording, which this BUY-heavy test set has few of.
 - These are **not** accuracy claims: the data is small and synthetic, and the
   95% intervals are wide.
-- Limitations and next steps: [`docs/findings.md`](docs/findings.md).
-- Committed reports are in `results/` (Opus) and `results/haiku/`. Reports that
-  replayed cached answers show $0; `uv run python scripts/compare_models.py`
+- Opus 5.5 was also measured, on an earlier prompt and hybrid rule; see
+  [`docs/findings.md`](docs/findings.md), which also covers limitations and next steps.
+- 18 of the 48 posts target known hard cases. On the other 30 the rules alone
+  already find 9 of 10 BUYs; most of the hybrid's gain is on the targeted rows
+  (3 → 7 of 8). See [`docs/findings.md`](docs/findings.md).
+- Committed reports are in `results/rules/`, `results/haiku/` (the default
+  model) and `results/opus/` (earlier prompt and hybrid rule). Reports that
+  replayed recorded answers show $0; `uv run python scripts/compare_models.py`
   recomputes their real cost.
 
 ## Project layout
@@ -201,7 +222,7 @@ frontend/                                      React + Tailwind source of the we
 tests/                                         pytest suite (the live Claude test is skipped by default)
 data/                                          synthetic development and held-out datasets
 docs/                                          policy, architecture, findings, production plan
-results/                                       committed evaluation reports and measured costs
+results/                                       committed reports (rules, haiku, opus), recorded Claude answers, measured costs
 scripts/                                       model comparison table
 ```
 

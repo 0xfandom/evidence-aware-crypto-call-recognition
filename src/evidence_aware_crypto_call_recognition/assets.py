@@ -92,5 +92,9 @@ def find_asset_mentions(text: str) -> list[AssetMention]:
 
 
 def asset_is_written_in(asset_as_written: str, *texts: str | None) -> bool:
-    needle = asset_as_written.strip().lower()
-    return bool(needle) and any(t and needle in t.lower() for t in texts)
+    """Whole-token match, ignoring case: "ETH" is found in "$ETH" or "ETH," but not in "something"."""
+    needle = asset_as_written.strip()
+    if not needle:
+        return False
+    pattern = re.compile(rf"(?<!\w){re.escape(needle)}(?!\w)", re.IGNORECASE)
+    return any(t and pattern.search(t) for t in texts)

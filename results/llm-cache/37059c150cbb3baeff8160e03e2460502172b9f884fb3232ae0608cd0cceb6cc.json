@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.93, "calls": [], "reasons": ["PAST_CALL_TRACK_RECORD", "NOT_CURRENT_BUY_CALL"], "limitations": ["Post only refers to a past buy call on $PEPE and a 40x gain; it gives no new instruction to buy now."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

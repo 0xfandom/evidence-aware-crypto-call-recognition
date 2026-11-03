@@ -9,7 +9,13 @@ import anyio
 from dotenv import load_dotenv
 
 from evidence_aware_crypto_call_recognition.contract import Post
-from evidence_aware_crypto_call_recognition.evaluate import evaluate, load_dataset, render_markdown, write_report
+from evidence_aware_crypto_call_recognition.evaluate import (
+    add_tag_split,
+    evaluate,
+    load_dataset,
+    render_markdown,
+    write_report,
+)
 from evidence_aware_crypto_call_recognition.llm import LlmSettings
 from evidence_aware_crypto_call_recognition.pipeline import Backend, classify_many
 
@@ -34,6 +40,8 @@ def _settings(args: argparse.Namespace) -> LlmSettings:
         overrides["run_budget_usd"] = args.run_budget
     if args.no_cache:
         overrides["cache_dir"] = None
+    if args.replay:
+        overrides.update(cache_dir=args.replay, replay_only=True)
     return LlmSettings(**{**settings.__dict__, **overrides})
 
 
@@ -47,6 +55,8 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--model", help="LLM model id (default from EACR_MODEL or claude-haiku-5-5)")
         p.add_argument("--run-budget", type=float, help="Hard USD cap for LLM spend in this run")
         p.add_argument("--no-cache", action="store_true", help="Do not reuse cached LLM decisions")
+        p.add_argument("--replay", type=Path, metavar="DIR",
+                       help="Use only recorded LLM answers from DIR (e.g. results/llm-cache); never call the API")
         p.add_argument("--concurrency", type=int, default=4)
 
     classify_parser = sub.add_parser("classify", help="Classify posts from JSONL (file or - for stdin)")
@@ -57,6 +67,8 @@ def main(argv: list[str] | None = None) -> int:
     eval_parser.add_argument("dataset", type=Path)
     eval_parser.add_argument("--out", type=Path, default=Path("runs"),
                              help="Report folder (default: runs/, git-ignored; committed reports live in results/)")
+    eval_parser.add_argument("--split-tags", metavar="TAG,TAG",
+                             help="Also report rows with any of these gold tags separately from the rest")
     add_common(eval_parser)
 
     serve_parser = sub.add_parser("serve", help="Run the web UI and HTTP API (localhost only by default)")
@@ -79,7 +91,10 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write(decision.model_dump_json() + "\n")
         return 0
 
-    result = evaluate(load_dataset(args.dataset), args.backend, settings, args.concurrency)
+    rows = load_dataset(args.dataset)
+    result = evaluate(rows, args.backend, settings, args.concurrency)
+    if args.split_tags:
+        result = add_tag_split(result, rows, {t.strip() for t in args.split_tags.split(",") if t.strip()})
     json_path, md_path = write_report(result, args.dataset, args.out)
     sys.stdout.write(render_markdown(result.report, args.dataset.name).split("## Accuracy by tag")[0])
     sys.stdout.write(f"\nFull report: {md_path}\nJSON: {json_path}\n")

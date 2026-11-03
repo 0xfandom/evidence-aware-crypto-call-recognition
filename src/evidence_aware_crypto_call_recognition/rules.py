@@ -56,6 +56,16 @@ ENDORSEMENT = re.compile(r"\b(agree|same|me\s+too|co-?sign|facts|this)\b|\+1|\bi
 REPLY_ASKS_FOR_PICK = re.compile(
     r"\b(what|which)\b.{0,40}\b(buy|pick|bag|long|accumulate|get\s+into)\b|\btop\s+pick\b|\bbest\s+(?:coin|alt|play)\b", _I
 )
+# General trading vocabulary. Only used to decide that a post without a known asset is not
+# plain chatter; it never makes a call on its own.
+MARKET_TALK = re.compile(
+    r"\b(trad(?:e|es|ing)|position\w*|siz(?:e|es|ed|ing)|entr(?:y|ies)|bags?|ap(?:e|ed|ing)|pump\w*|moon\w*|"
+    r"sends|sending|gift|cheap|undervalued|breakout|chart\w*|support|resistance|levels?|dips?|"
+    r"accumulat\w*|load(?:ed|ing)?|bid\w*|long\w*|short\w*|cycle|alts?|altcoins?|coins?|tokens?|ticker|"
+    r"presale|airdrop|ath|rally|bull\w*|bear\w*|mcap|market\s*cap|stack\w*|hodl\w*|dca|"
+    r"buy\w*|sell\w*|sold|grab\w*|adding|bottom(?:ed)?)\b|\b\d+x\b|\b\d+(?:\.\d+)?k\b",
+    _I,
+)
 # A full stop between digits ("0.30", "61.2k") is a decimal point, not a sentence end.
 _SENTENCE = re.compile(r"(?:[^.!?\n]|(?<=\d)\.(?=\d))+[.!?]*", re.MULTILINE)
 
@@ -283,6 +293,12 @@ def _classify(post: Post) -> Proposal:
     if REFERRAL.search(text):
         notes.append("REFERRAL_OR_GIVEAWAY")
     if not own.mentions:
+        # The rules know few bare tickers, so market wording without a known asset may still be a
+        # call on a coin they cannot name. Keep the confidence low so the hybrid asks the LLM.
+        if MARKET_TALK.search(text):
+            return Proposal(Label.NO_NEW_BUY, 0.6, reasons=(*notes, "MARKET_TALK_WITHOUT_KNOWN_ASSET"),
+                            limitations=("Market wording but no asset the rules recognise; the post may name "
+                                         "a coin they do not know.",))
         return Proposal(Label.NO_NEW_BUY, 0.9, reasons=tuple(notes) or ("NO_ASSET_NO_ACTION",))
     if notes:
         return Proposal(Label.NO_NEW_BUY, 0.75, reasons=tuple(notes))

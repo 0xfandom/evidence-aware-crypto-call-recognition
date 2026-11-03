@@ -1,0 +1,1 @@
+{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["NEGATIVE_ADVICE", "NO_BUY_ACTION"], "limitations": ["Reply advises waiting on $SOL, which is a negation of a buy, so no buy call is made."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

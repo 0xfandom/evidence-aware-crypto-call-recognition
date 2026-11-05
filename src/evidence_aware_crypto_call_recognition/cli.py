@@ -1,105 +1,121 @@
+"""Command line: read input JSONL, write one output JSON object per Case ID."""
 from __future__ import annotations
 
 import argparse
 import json
 import sys
+import traceback
 from pathlib import Path
 
-import anyio
-from dotenv import load_dotenv
-
-from evidence_aware_crypto_call_recognition.contract import Post
-from evidence_aware_crypto_call_recognition.evaluate import (
-    add_tag_split,
-    evaluate,
-    load_dataset,
-    render_markdown,
-    write_report,
-)
-from evidence_aware_crypto_call_recognition.llm import LlmSettings
-from evidence_aware_crypto_call_recognition.pipeline import Backend, classify_many
+from evidence_aware_crypto_call_recognition import __version__
+from evidence_aware_crypto_call_recognition.decide import decide
+from evidence_aware_crypto_call_recognition.integrity import capacity_errors, input_errors
+from evidence_aware_crypto_call_recognition.selfcheck import output_errors
 
 
-def _read_posts(source: str) -> list[Post]:
-    lines = (sys.stdin if source == "-" else open(source)).read().splitlines()
-    posts = []
-    for line in lines:
+class InputFileError(ValueError):
+    pass
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict:
+    result: dict = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate field {key!r}")
+        result[key] = value
+    return result
+
+
+def _reject_constant(name: str) -> float:
+    raise ValueError(f"non-finite number {name}")
+
+
+def read_cases(path: Path) -> list[dict]:
+    cases: list[dict] = []
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
-        record = json.loads(line)
-        posts.append(Post.model_validate(record["post"] if "post" in record else record))
-    return posts
+        try:
+            value = json.loads(line, object_pairs_hook=_reject_duplicate_keys, parse_constant=_reject_constant)
+        except ValueError as error:
+            raise InputFileError(f"{path}: line {number}: invalid JSON ({error})") from error
+        if not isinstance(value, dict) or not isinstance(value.get("case_id"), str):
+            raise InputFileError(f"{path}: line {number}: a JSON object with a string case_id is required")
+        cases.append(value)
+    ids = [case["case_id"] for case in cases]
+    duplicates = sorted({i for i in ids if ids.count(i) > 1})
+    if duplicates:
+        raise InputFileError(f"{path}: duplicate case IDs cannot be bound to results: {', '.join(duplicates)}")
+    return cases
 
 
-def _settings(args: argparse.Namespace) -> LlmSettings:
-    settings = LlmSettings.from_env()
-    overrides = {}
-    if args.model:
-        overrides["model"] = args.model
-    if args.run_budget is not None:
-        overrides["run_budget_usd"] = args.run_budget
-    if args.no_cache:
-        overrides["cache_dir"] = None
-    if args.replay:
-        overrides.update(cache_dir=args.replay, replay_only=True)
-    return LlmSettings(**{**settings.__dict__, **overrides})
+def process_case(case: dict) -> tuple[dict, dict | None]:
+    case_id = case["case_id"]
+    errors = input_errors(case)
+    if errors:
+        return ({"case_id": case_id, "status": "INPUT_INVALID", "error_codes": errors,
+                 "explanation": "Technical rejection before reading: " + ", ".join(errors)
+                 + ". No semantic label is attached to an invalid source."}, None)
+    capacity = capacity_errors(case)
+    if capacity:
+        return ({"case_id": case_id, "status": "CAPACITY_LIMIT", "error_codes": capacity,
+                 "explanation": "The case exceeds the local processing limits, so it was not read in part."}, None)
+    decision = decide(case)
+    output = {
+        "case_id": case_id,
+        "status": "OK",
+        "label": decision.label,
+        "confidence": decision.confidence,
+        "current_buys": decision.current_buys,
+        "evidence_ids": decision.evidence_ids,
+        "explanation": decision.explanation,
+        "limitations": decision.limitations,
+        "execution_verified": False,
+    }
+    return output, decision.trace
 
 
 def main(argv: list[str] | None = None) -> int:
-    load_dotenv()
-    parser = argparse.ArgumentParser(prog="eacr", description="Evidence-Aware Crypto Call Recognition")
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    def add_common(p: argparse.ArgumentParser) -> None:
-        p.add_argument("--backend", type=Backend, choices=list(Backend), default=Backend.RULES)
-        p.add_argument("--model", help="LLM model id (default from EACR_MODEL or claude-haiku-5-5)")
-        p.add_argument("--run-budget", type=float, help="Hard USD cap for LLM spend in this run")
-        p.add_argument("--no-cache", action="store_true", help="Do not reuse cached LLM decisions")
-        p.add_argument("--replay", type=Path, metavar="DIR",
-                       help="Use only recorded LLM answers from DIR (e.g. results/llm-cache); never call the API")
-        p.add_argument("--concurrency", type=int, default=4)
-
-    classify_parser = sub.add_parser("classify", help="Classify posts from JSONL (file or - for stdin)")
-    classify_parser.add_argument("input")
-    add_common(classify_parser)
-
-    eval_parser = sub.add_parser("eval", help="Evaluate against a labelled JSONL dataset")
-    eval_parser.add_argument("dataset", type=Path)
-    eval_parser.add_argument("--out", type=Path, default=Path("runs"),
-                             help="Report folder (default: runs/, git-ignored; committed reports live in results/)")
-    eval_parser.add_argument("--split-tags", metavar="TAG,TAG",
-                             help="Also report rows with any of these gold tags separately from the rest")
-    add_common(eval_parser)
-
-    serve_parser = sub.add_parser("serve", help="Run the web UI and HTTP API (localhost only by default)")
-    serve_parser.add_argument("--host", default="127.0.0.1")
-    serve_parser.add_argument("--port", type=int, default=8000)
-
+    parser = argparse.ArgumentParser(prog="eacr", description=__doc__)
+    parser.add_argument("--inputs", required=True, type=Path, help="input JSONL, one case per line")
+    parser.add_argument("--output", required=True, type=Path, help="predictions JSONL to write")
+    parser.add_argument("--trace", type=Path, help="optional JSONL with the sentence-level reading of each case")
+    parser.add_argument("--version", action="version", version=f"eacr {__version__}")
     args = parser.parse_args(argv)
-    if args.command == "serve":
-        import uvicorn
 
-        sys.stdout.write(f"Evidence-Aware Crypto Call Recognition UI: http://{args.host}:{args.port}/   API docs: http://{args.host}:{args.port}/docs\n")
-        uvicorn.run("evidence_aware_crypto_call_recognition.api:app", host=args.host, port=args.port)
-        return 0
+    try:
+        cases = read_cases(args.inputs)
+    except (InputFileError, OSError, UnicodeDecodeError) as error:
+        print(f"eacr: {error}", file=sys.stderr)
+        return 2
 
-    settings = _settings(args)
+    outputs, traces, self_check_failures = [], [], 0
+    for case in cases:
+        try:
+            output, trace = process_case(case)
+        except Exception as error:  # one broken case must not lose every other result
+            traceback.print_exc(file=sys.stderr)
+            output, trace = ({"case_id": case["case_id"], "status": "CAPACITY_LIMIT", "error_codes": ["PROCESSING_FAILURE"],
+                              "explanation": f"The local reader failed on this case ({type(error).__name__}); "
+                                             "no label is fabricated."}, None)
+        problems = output_errors(case, output)
+        if problems:
+            self_check_failures += 1
+            print(f"eacr: self-check failed for {case['case_id']}: {', '.join(problems)}", file=sys.stderr)
+        outputs.append(output)
+        traces.append({"case_id": case["case_id"], "reading": trace})
 
-    if args.command == "classify":
-        decisions = anyio.run(classify_many, _read_posts(args.input), args.backend, settings, args.concurrency)
-        for decision in decisions:
-            sys.stdout.write(decision.model_dump_json() + "\n")
-        return 0
-
-    rows = load_dataset(args.dataset)
-    result = evaluate(rows, args.backend, settings, args.concurrency)
-    if args.split_tags:
-        result = add_tag_split(result, rows, {t.strip() for t in args.split_tags.split(",") if t.strip()})
-    json_path, md_path = write_report(result, args.dataset, args.out)
-    sys.stdout.write(render_markdown(result.report, args.dataset.name).split("## Accuracy by tag")[0])
-    sys.stdout.write(f"\nFull report: {md_path}\nJSON: {json_path}\n")
-    return 0
+    args.output.write_text("".join(json.dumps(o, ensure_ascii=False) + "\n" for o in outputs), encoding="utf-8")
+    if args.trace:
+        args.trace.write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in traces), encoding="utf-8")
+    counts: dict[str, int] = {}
+    for output in outputs:
+        key = output.get("label") or output["status"]
+        counts[key] = counts.get(key, 0) + 1
+    summary = ", ".join(f"{k} {v}" for k, v in sorted(counts.items()))
+    print(f"eacr: wrote {len(outputs)} results to {args.output} ({summary})", file=sys.stderr)
+    return 3 if self_check_failures else 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["PORTFOLIO_LIST_ONLY", "EXPLICIT_NO_NEW_ENTRIES"], "limitations": ["Post lists existing holdings only and disclaims new entries, so no buy-side action is present."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

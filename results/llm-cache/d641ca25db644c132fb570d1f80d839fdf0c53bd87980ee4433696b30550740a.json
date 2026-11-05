@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.97, "calls": [], "reasons": ["NEGATION_NO_BUY_CALL", "ASSET_AVOIDED_NOT_BOUGHT"], "limitations": ["Short original post with no further context; the author's stance on the lawsuit timing is not elaborated."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

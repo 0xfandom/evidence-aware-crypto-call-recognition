@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["QUOTED_CALL_REJECTED", "NEGATION_OR_WARNING", "NO_OWN_BUY_CALL"], "limitations": ["The quoted buy call for $TRX is not endorsed by the author; the author's reply rejects it."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

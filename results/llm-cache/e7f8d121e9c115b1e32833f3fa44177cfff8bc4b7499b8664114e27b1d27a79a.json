@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.93, "calls": [], "reasons": ["BEARISH_FORECAST_ONLY", "NO_BUY_SIDE_ACTION"], "limitations": ["Post is a short price view with no explicit buy wording; judged on text alone without account context."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["PORTFOLIO_HOLDINGS_ONLY", "NO_BUY_ACTION", "NO_CHANGES_THIS_WEEK"], "limitations": ["Post describes existing allocations only; no explicit buy instruction or new purchase disclosed."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

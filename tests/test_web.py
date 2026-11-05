@@ -42,7 +42,7 @@ class Server(unittest.TestCase):
             return error.code, error.read()
 
     def test_page_is_served(self):
-        for path in ("/", "/?example=joke&tab=case"):
+        for path in ("/", "/?example=joke&mode=case"):
             status, body = self.call(path)
             self.assertEqual(status, 200, path)
             self.assertIn(b"Evidence-Aware Crypto Call Recognition", body)
@@ -64,11 +64,32 @@ class Server(unittest.TestCase):
         status, _ = self.call("/api/case", {"case_json": '{"case_id": "dev-0123456789", "case_id": "dev-0123456789"}'})
         self.assertEqual(status, 400)
 
+    def test_health_lists_the_datasets(self):
+        status, body = self.call("/api/health")
+        health = json.loads(body)
+        self.assertEqual(status, 200)
+        self.assertIn("development", health["sets"])
+
     def test_development_set_runs_with_the_comparison(self):
-        status, body = self.call("/api/run", {"set": "development"})
-        summary = json.loads(body)["summary"]
-        self.assertEqual((status, summary["cases"], summary["correct"], summary["accepted_false_buys"]), (200, 24, 24, 0))
+        inputs = json.loads(self.call("/api/set?name=development")[1])["inputs"]
+        status, body = self.call("/api/batch", {"inputs": inputs, "set": "development"})
+        result = json.loads(body)
+        summary = result["summary"]
+        self.assertEqual((status, len(result["results"])), (200, 24))
+        self.assertEqual((summary["cases"], summary["correct"], summary["accepted_false_buys"]), (24, 24, 0))
+
+    def test_pasted_cases_run_without_references(self):
+        lines = json.loads(self.call("/api/set?name=development")[1])["inputs"].splitlines()[:3]
+        status, body = self.call("/api/batch", {"inputs": "\n".join(lines), "set": None})
+        result = json.loads(body)
+        self.assertEqual((status, len(result["results"]), "summary" in result), (200, 3, False))
+
+    def test_bad_batch_lines_are_named(self):
+        status, body = self.call("/api/batch", {"inputs": '{"case_id": "dev-0123456789"}\nnot json', "set": None})
+        self.assertEqual(status, 400)
+        self.assertIn("line 2", json.loads(body)["error"])
 
     def test_unknown_routes_and_sets(self):
-        self.assertEqual(self.call("/api/run", {"set": "../secrets"})[0], 400)
+        self.assertEqual(self.call("/api/batch", {"inputs": "x", "set": "../secrets"})[0], 400)
+        self.assertEqual(self.call("/api/set?name=../secrets")[0], 404)
         self.assertEqual(self.call("/nothing")[0], 404)

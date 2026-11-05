@@ -1,0 +1,19 @@
+{
+  "version": "synthetic-buy-assessment-v1",
+  "createdUtc": "2026-10-30T22:07:34.144150+00:00",
+  "classification_threshold": 0.75,
+  "files": {
+    "DATA_NOTICE.md": "ed0e8ac0fc1232531aec5778510a5feab20c70956baf3d115db21fa0bd9f7200",
+    "POLICY_SUMMARY.md": "7f462e50cb802c90ec1314f827b645450395caaf0907b5c7c78145a9a47d5423",
+    "README.md": "1d86c13a2f51260093a82a9d98f0d52a52a34b31a05a62e9d596ec898336788a",
+    "assessment.py": "3805b13759dd580b70d0daa70d7d7cb856261f83ab709c4dae6f6c469d744138",
+    "development.inputs.jsonl": "9a8e2bc159ee30cc9eb1870fd3389e34e781070a163eaee4e898a1f42ca81523",
+    "development.references.jsonl": "e981d65774886cde003e3e62722393033c8d84a414f5fa495552bbfc1e9dfe67",
+    "schemas/input.schema.json": "2e79cb8bd27159ab4dfa5334815d59aca01bb58e230947e5aa0d5512017197a6",
+    "schemas/output.schema.json": "5313ae63d7b3cc33ecfdac86858e4c6b5e079b0e304c7c1119760a8f40e9d0f7",
+    "test_contract.py": "e1515560843e248bdcb7ab26e44d6a7524fa92dce267877a66bbf14f71bc834d",
+    "verify_package.py": "c446968dcb9d9ad31c4d90a9c28e62a2c1ced554a56755329857aa2e80b02796"
+  },
+  "scope": "Candidate-safe development package",
+  "model_or_candidate_run": false
+}

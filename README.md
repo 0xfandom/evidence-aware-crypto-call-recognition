@@ -40,16 +40,18 @@ PYTHONPATH=src python3 -m evidence_aware_crypto_call_recognition.web   # http://
 
 A local page on the standard-library HTTP server, bound to 127.0.0.1:
 
-- **Post**: paste a post, optionally with context posts, a missing prefix or an image
-  that was not captured. It is wrapped into a valid package case and decided. The cited
-  evidence is highlighted, and the reading shows the operation found for each asset.
+- **One post**: paste a post, optionally with context posts, a missing prefix or an image
+  that was not captured. It is wrapped into a valid package case and classified. The
+  cited evidence is highlighted, and the reading shows the operation found for each asset.
+- **Many posts**: paste or choose a JSONL file of package input cases and classify them
+  all. Loading one of the bundled sets also compares the results with its references,
+  with Wilson intervals. Click a row to see that decision. The sets are read from the
+  repository checkout, so the list is empty when the package is installed elsewhere.
 - **Package case**: paste one input case as JSON. Integrity problems are rejected with
   the package's error codes.
-- **Dataset**: run the development set or a set in `data/`, compared with its references,
-  with Wilson intervals. Click a row to see that decision. The sets are read from the
-  repository checkout, so this tab is empty when the package is installed elsewhere.
 
-Links such as `/?example=joke` or `/?set=development` open a state directly.
+Links such as `/?example=joke`, `/?example=joke&mode=case` or `/?set=development` open a
+state directly.
 A one-minute walkthrough is in [`assets/demo.mp4`](assets/demo.mp4).
 
 ![Decision for a post with an exit and an entry](assets/ui.png)

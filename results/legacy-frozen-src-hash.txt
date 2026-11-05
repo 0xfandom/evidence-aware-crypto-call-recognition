@@ -1,0 +1,1 @@
+411531eee023a2a5  first 16 hex of the sha256 of the reader source modules, concatenated, taken before the first run on data/legacy.*

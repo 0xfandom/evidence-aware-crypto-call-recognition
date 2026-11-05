@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/synthetic-buy/input-v1",
+  "title": "Synthetic BUY assessment input v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "synthetic",
+    "available_at_utc",
+    "primary",
+    "context",
+    "unavailable_context",
+    "asset_identity_evidence",
+    "evidence_catalogue"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "pattern": "^(dev|eval)-[0-9a-f]{10}$"
+    },
+    "synthetic": {
+      "const": true
+    },
+    "available_at_utc": {
+      "type": "string"
+    },
+    "primary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "author_id",
+        "published_at_utc",
+        "text",
+        "text_sha256",
+        "capture_scope"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "pattern": "^sim_post_"
+        },
+        "author_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "published_at_utc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "capture_scope": {
+          "enum": [
+            "FULL_TEXT",
+            "FRAGMENT"
+          ]
+        }
+      }
+    },
+    "context": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_id",
+          "author_id",
+          "published_at_utc",
+          "text",
+          "text_sha256",
+          "capture_scope"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "pattern": "^sim_post_"
+          },
+          "author_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "published_at_utc": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "capture_scope": {
+            "enum": [
+              "FULL_TEXT",
+              "FRAGMENT"
+            ]
+          }
+        }
+      }
+    },
+    "unavailable_context": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "reference"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "IMAGE",
+              "VIDEO",
+              "REPLY_PARENT",
+              "LINKED_PAGE",
+              "MISSING_PREFIX"
+            ]
+          },
+          "reference": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "asset_identity_evidence": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "evidence_catalogue": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence_id",
+          "source_id",
+          "start_utf16",
+          "end_utf16"
+        ],
+        "properties": {
+          "evidence_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "start_utf16": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end_utf16": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  },
+  "$comment": "Nullable identity/time and hash-valid-looking corruption are deliberate integrity fixtures. assessment.input_errors is normative for identity, hashes, chronology, catalogue and cross-field constraints beyond JSON shape."
+}

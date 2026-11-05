@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["WARNING_NOT_BUY", "HONEYPOT_CAUTION"], "limitations": ["Post is a warning about $PUMPX; the phrase 'puedes comprar' describes a trap, not a recommendation to buy."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

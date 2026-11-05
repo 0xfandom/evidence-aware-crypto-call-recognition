@@ -1,25 +1,19 @@
-"""Evaluation against a labelled JSONL dataset. Metrics re-check evidence independently of the guard."""
+"""Quick per-case comparison of predictions with a reference file.
 
+A development aid only. The client's `candidate_package/assessment.py score` is the
+authoritative scorer; this module exists so a mismatch can be read case by case, and so
+small-sample results carry an interval. The Wilson interval and the per-tag breakdown are
+kept from the first version of this module.
+
+Usage: python3 -m evidence_aware_crypto_call_recognition.evaluate INPUTS REFERENCES PREDICTIONS
+"""
 from __future__ import annotations
 
 import json
 import math
-import time
+import sys
 from collections import Counter, defaultdict
-from dataclasses import dataclass
 from pathlib import Path
-
-import anyio
-
-from evidence_aware_crypto_call_recognition.contract import AssetStatus, Decision, Label, LabelledPost
-from evidence_aware_crypto_call_recognition.llm import LlmSettings
-from evidence_aware_crypto_call_recognition.pipeline import Backend, classify_many
-
-LABELS = (Label.BUY, Label.NO_NEW_BUY, Label.ABSTAIN)
-
-
-def load_dataset(path: Path) -> list[LabelledPost]:
-    return [LabelledPost.model_validate_json(line) for line in path.read_text().splitlines() if line.strip()]
 
 
 def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float, float] | None:
@@ -32,215 +26,88 @@ def wilson_interval(successes: int, total: int, z: float = 1.96) -> tuple[float,
     return round(max(0.0, centre - margin), 3), round(min(1.0, centre + margin), 3)
 
 
-def _asset_key(decision_call) -> str:
-    asset = decision_call.asset
-    if asset.status == AssetStatus.UNRESOLVED:
-        return "UNRESOLVED"
-    return asset.address if asset.status == AssetStatus.ADDRESS else asset.symbol
+def _rate(successes: int, total: int) -> str:
+    interval = wilson_interval(successes, total)
+    return f"{successes}/{total}" + (f" (95% CI {interval[0]:.2f}-{interval[1]:.2f})" if interval else "")
 
 
-def _attribution_errors(row: LabelledPost, decision: Decision) -> list[str]:
-    """Independent re-check of the evidence contract for one predicted BUY."""
-    post = row.post
-    errors = []
-    if decision.source.source_id != post.source_id:
-        errors.append("source_id_mismatch")
-    expected_handle = post.author.handle if post.author else None
-    if decision.author.handle != expected_handle:
-        errors.append("author_mismatch")
-    sources = [t for t in (post.text, post.context.parent_text, post.context.quoted_text) if t]
-    for call in decision.calls:
-        if not any(call.supporting_text in t for t in sources):
-            errors.append("supporting_text_not_verbatim")
-        if call.asset.verified:
-            errors.append("asset_claimed_verified")
-    if row.gold.label == Label.BUY:
-        predicted = {_asset_key(c) for c in decision.calls}
-        gold = set(row.gold.assets)
-        if gold - predicted:
-            errors.append("asset_missed")
-        if predicted - gold - {"UNRESOLVED"}:
-            errors.append("asset_extra")
-    return errors
+def load(path: str) -> dict[str, dict]:
+    rows = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+    return {row["case_id"]: row for row in rows}
 
 
-@dataclass(frozen=True)
-class EvalResult:
-    report: dict
-    decisions: list[Decision]
+def covered(required: dict, spans: list[dict]) -> bool:
+    return any(s["source_id"] == required["source_id"] and s["start_utf16"] <= required["start_utf16"]
+               and s["end_utf16"] >= required["end_utf16"] for s in spans)
 
 
-def evaluate(rows: list[LabelledPost], backend: Backend, settings: LlmSettings | None = None,
-             concurrency: int = 4) -> EvalResult:
-    started = time.perf_counter()
-    decisions = anyio.run(classify_many, [r.post for r in rows], backend, settings, concurrency)
-    return build_report(rows, decisions, backend, time.perf_counter() - started)
+def _compare_one(case: dict, reference: dict, prediction: dict | None) -> dict:
+    row = {"case_id": reference["case_id"], "reference_label": reference.get("label"),
+           "expected_status": reference["expected_status"], "tags": reference["boundary_tags"]}
+    if prediction is None:
+        return {**row, "ok": False, "status": "MISSING"}
+    row.update(status=prediction["status"], label=prediction.get("label"), confidence=prediction.get("confidence"),
+               error_codes=prediction.get("error_codes", []))
+    if reference["expected_status"] != "OK":
+        ok = prediction["status"] == "INPUT_INVALID" and bool(set(reference["expected_errors"]) & set(prediction["error_codes"]))
+        return {**row, "ok": ok}
+    catalogue = {s["evidence_id"]: s for s in case["evidence_catalogue"]}
+    assets = sorted(b["asset_mention"] for b in prediction.get("current_buys", []))
+    accepted = prediction.get("confidence", 0) >= 0.75
+    support = all(covered(r, [catalogue[i] for i in prediction.get("evidence_ids", [])]) for r in reference["required_support"])
+    for asset, required in reference.get("buy_support", {}).items():
+        entry = next((b for b in prediction.get("current_buys", []) if b["asset_mention"] == asset), None)
+        if not entry or not all(covered(r, [catalogue[i] for i in entry["evidence_ids"]]) for r in required):
+            support = False
+    ok = row["label"] == reference["label"] and assets == sorted(reference["buy_assets"]) and accepted and support
+    return {**row, "ok": ok, "assets": assets, "reference_assets": sorted(reference["buy_assets"]),
+            "accepted": accepted, "support": support}
 
 
-def build_report(rows: list[LabelledPost], decisions: list[Decision], backend: Backend,
-                 wall_seconds: float) -> EvalResult:
-    confusion = {g.value: {p.value: 0 for p in LABELS} for g in LABELS}
+def compare(inputs: dict[str, dict], references: dict[str, dict], predictions: dict[str, dict]) -> dict:
+    """Per-case rows and a summary: fully correct, BUYs found, accepted false BUYs, by tag."""
+    rows = [_compare_one(inputs[case_id], reference, predictions.get(case_id)) for case_id, reference in references.items()]
+    buy = Counter()
     by_tag: dict[str, Counter] = defaultdict(Counter)
-    attribution = Counter()
-    mismatches = []
-    corrected = 0
-
-    for row, decision in zip(rows, decisions, strict=True):
-        gold, predicted = row.gold.label, decision.label
-        confusion[gold.value][predicted.value] += 1
-        for tag in row.gold.tags:
+    for row in rows:
+        if row["expected_status"] != "OK" or row["status"] == "MISSING":
+            continue
+        accepted_buy = row["label"] == "BUY" and row["accepted"]
+        buy["reference"] += row["reference_label"] == "BUY"
+        buy["found"] += row["reference_label"] == "BUY" and row["ok"]
+        buy["accepted"] += accepted_buy
+        buy["false"] += accepted_buy and row["reference_label"] != "BUY"
+        for tag in row["tags"]:
             by_tag[tag]["total"] += 1
-            by_tag[tag]["correct"] += int(gold == predicted)
-        if decision.guard_corrections:
-            corrected += 1
-        if predicted == Label.BUY:
-            for error in _attribution_errors(row, decision):
-                attribution[error] += 1
-        if gold != predicted:
-            mismatches.append({
-                "source_id": row.post.source_id, "gold": gold.value, "predicted": predicted.value,
-                "confidence": decision.confidence, "reasons": list(decision.reasons), "tags": list(row.gold.tags),
-                "text": row.post.text[:160],
-            })
-
-    buy = confusion[Label.BUY.value]
-    true_buy = buy[Label.BUY.value]
-    gold_buy = sum(buy.values())
-    predicted_buy = sum(confusion[g.value][Label.BUY.value] for g in LABELS)
-    false_buy = predicted_buy - true_buy
-    abstained = sum(confusion[g.value][Label.ABSTAIN.value] for g in LABELS)
-    decided = len(rows) - abstained
-    decided_correct = sum(confusion[g.value][g.value] for g in (Label.BUY, Label.NO_NEW_BUY))
-    correct = sum(confusion[g.value][g.value] for g in LABELS)
-    latencies = sorted(d.cost.latency_ms for d in decisions)
-
-    report = {
-        "backend": backend.value,
-        "n": len(rows),
-        "label_distribution": {g.value: sum(confusion[g.value].values()) for g in LABELS},
-        "confusion_gold_x_predicted": confusion,
-        "buy": {
-            "correct": true_buy,
-            "missed_as_no_new_buy": buy[Label.NO_NEW_BUY.value],
-            "missed_as_abstain": buy[Label.ABSTAIN.value],
-            "false_buy": false_buy,
-            "false_buy_from_no_new_buy": confusion[Label.NO_NEW_BUY.value][Label.BUY.value],
-            "false_buy_from_abstain": confusion[Label.ABSTAIN.value][Label.BUY.value],
-            "precision": round(true_buy / predicted_buy, 3) if predicted_buy else None,
-            "precision_ci95": wilson_interval(true_buy, predicted_buy),
-            "recall": round(true_buy / gold_buy, 3) if gold_buy else None,
-            "recall_ci95": wilson_interval(true_buy, gold_buy),
-        },
-        "abstention": {
-            "count": abstained,
-            "rate": round(abstained / len(rows), 3) if rows else None,
-            "on_gold_abstain": confusion[Label.ABSTAIN.value][Label.ABSTAIN.value],
-            "on_gold_buy": buy[Label.ABSTAIN.value],
-            "on_gold_no_new_buy": confusion[Label.NO_NEW_BUY.value][Label.ABSTAIN.value],
-        },
-        "accuracy_3way": round(correct / len(rows), 3) if rows else None,
-        "accuracy_3way_ci95": wilson_interval(correct, len(rows)),
-        "accuracy_when_decided": round(decided_correct / decided, 3) if decided else None,
-        "attribution_errors_on_predicted_buy": dict(attribution),
-        "decisions_with_guard_corrections": corrected,
-        "cost": {
-            "usd_total": round(sum(d.cost.usd for d in decisions), 4),
-            "llm_calls": sum(d.cost.llm_calls for d in decisions),
-            "cache_hits": sum(d.cost.cache_hits for d in decisions),
-            "input_tokens": sum(d.cost.input_tokens for d in decisions),
-            "output_tokens": sum(d.cost.output_tokens for d in decisions),
-            "latency_ms_mean": round(sum(latencies) / len(latencies), 2) if latencies else None,
-            "latency_ms_p95": latencies[max(0, math.ceil(0.95 * len(latencies)) - 1)] if latencies else None,
-            "wall_seconds": round(wall_seconds, 2),
-        },
-        "by_tag": {t: {"correct": c["correct"], "total": c["total"]} for t, c in sorted(by_tag.items())},
-        "mismatches": mismatches,
-    }
-    return EvalResult(report=report, decisions=decisions)
+            by_tag[tag]["correct"] += row["ok"]
+    correct = sum(row["ok"] for row in rows)
+    summary = {"cases": len(rows), "correct": correct, "correct_ci95": wilson_interval(correct, len(rows)),
+               "reference_buys": buy["reference"], "buys_found": buy["found"],
+               "buys_found_ci95": wilson_interval(buy["found"], buy["reference"]),
+               "accepted_buys": buy["accepted"], "accepted_false_buys": buy["false"],
+               "by_tag": {tag: dict(counts) for tag, counts in sorted(by_tag.items())}}
+    return {"rows": rows, "summary": summary}
 
 
-def _subset_summary(report: dict) -> dict:
-    b = report["buy"]
-    return {
-        "n": report["n"],
-        "gold_buy": report["label_distribution"]["BUY"],
-        "buy_correct": b["correct"],
-        "false_buy": b["false_buy"],
-        "precision": b["precision"], "precision_ci95": b["precision_ci95"],
-        "recall": b["recall"], "recall_ci95": b["recall_ci95"],
-        "abstentions": report["abstention"]["count"],
-        "accuracy_3way": report["accuracy_3way"], "accuracy_3way_ci95": report["accuracy_3way_ci95"],
-    }
+def main(inputs_path: str, references_path: str, predictions_path: str) -> int:
+    result = compare(load(inputs_path), load(references_path), load(predictions_path))
+    for row in result["rows"]:
+        mark = "ok " if row["ok"] else "BAD"
+        if row["status"] == "MISSING":
+            print(f"{row['case_id']}: MISSING")
+        elif row["expected_status"] != "OK":
+            print(f"{row['case_id']}: {mark} INPUT_INVALID {row['error_codes']}")
+        else:
+            print(f"{row['case_id']}: {mark} ref={row['reference_label']:<10} got={row['label']:<10} "
+                  f"conf={row['confidence']} assets={row['assets']} support={row['support']} tags={row['tags']}")
+    s = result["summary"]
+    print(f"\n{s['correct']}/{s['cases']} cases fully match (label, asset set, gate, support spans)")
+    print(f"fully correct: {_rate(s['correct'], s['cases'])}")
+    print(f"BUY found:     {_rate(s['buys_found'], s['reference_buys'])}")
+    print(f"accepted false BUY: {s['accepted_false_buys']} of {s['accepted_buys']} accepted BUYs")
+    print("by tag: " + ", ".join(f"{t} {c['correct']}/{c['total']}" for t, c in s["by_tag"].items()))
+    return 0
 
 
-def add_tag_split(result: EvalResult, rows: list[LabelledPost], tags: set[str]) -> EvalResult:
-    """Metrics for rows with any of `tags` and for the rest, e.g. targeted challenge rows vs general rows."""
-    backend = Backend(result.report["backend"])
-    pairs = list(zip(rows, result.decisions, strict=True))
-    subsets = {}
-    for name, keep in (("tagged", True), ("untagged", False)):
-        chosen = [(r, d) for r, d in pairs if bool(set(r.gold.tags) & tags) == keep]
-        if chosen:
-            sub = build_report([r for r, _ in chosen], [d for _, d in chosen], backend, 0.0).report
-            subsets[name] = _subset_summary(sub)
-    report = {**result.report, "tag_split": {"tags": sorted(tags), **subsets}}
-    return EvalResult(report=report, decisions=result.decisions)
-
-
-def render_markdown(report: dict, dataset_name: str) -> str:
-    b, a, c = report["buy"], report["abstention"], report["cost"]
-    lines = [
-        f"# Evaluation — `{dataset_name}` — backend `{report['backend']}`",
-        "",
-        f"n = {report['n']} · gold labels {report['label_distribution']}",
-        "",
-        "| Metric | Value |",
-        "|---|---|",
-        f"| BUY correctly recognised | {b['correct']} |",
-        f"| BUY missed → NO_NEW_BUY | {b['missed_as_no_new_buy']} |",
-        f"| BUY missed → ABSTAIN | {b['missed_as_abstain']} |",
-        f"| Incorrect BUY (false positives) | {b['false_buy']} (from NO_NEW_BUY {b['false_buy_from_no_new_buy']}, from ABSTAIN {b['false_buy_from_abstain']}) |",
-        f"| BUY precision (95% CI) | {b['precision']} {b['precision_ci95']} |",
-        f"| BUY recall (95% CI) | {b['recall']} {b['recall_ci95']} |",
-        f"| Abstentions | {a['count']} ({a['rate']}) — on gold ABSTAIN {a['on_gold_abstain']}, BUY {a['on_gold_buy']}, NO_NEW_BUY {a['on_gold_no_new_buy']} |",
-        f"| 3-way accuracy (95% CI) | {report['accuracy_3way']} {report['accuracy_3way_ci95']} |",
-        f"| Accuracy when not abstaining | {report['accuracy_when_decided']} |",
-        f"| Attribution errors on predicted BUY | {report['attribution_errors_on_predicted_buy'] or 'none'} |",
-        f"| Decisions the guard corrected | {report['decisions_with_guard_corrections']} |",
-        f"| Cost | ${c['usd_total']} · {c['llm_calls']} LLM calls · {c['cache_hits']} cache hits · {c['input_tokens']} in / {c['output_tokens']} out tokens |",
-        f"| Latency per post | mean {c['latency_ms_mean']} ms · p95 {c['latency_ms_p95']} ms · wall {c['wall_seconds']} s |",
-        "",
-        "## Confusion matrix (rows = gold, columns = predicted)",
-        "",
-        "| gold \\ pred | BUY | NO_NEW_BUY | ABSTAIN |",
-        "|---|---|---|---|",
-    ]
-    for gold, row in report["confusion_gold_x_predicted"].items():
-        lines.append(f"| {gold} | {row['BUY']} | {row['NO_NEW_BUY']} | {row['ABSTAIN']} |")
-    if split := report.get("tag_split"):
-        lines += ["", f"## Split by tags: {', '.join(split['tags'])}", "",
-                  "| rows | n | BUY correct / gold | false BUY | BUY recall (95% CI) | abstentions | 3-way accuracy (95% CI) |",
-                  "|---|---|---|---|---|---|---|"]
-        for name, label in (("tagged", "with any of these tags"), ("untagged", "without them")):
-            if s := split.get(name):
-                lines.append(f"| {label} | {s['n']} | {s['buy_correct']} / {s['gold_buy']} | {s['false_buy']} "
-                             f"| {s['recall']} {s['recall_ci95']} | {s['abstentions']} "
-                             f"| {s['accuracy_3way']} {s['accuracy_3way_ci95']} |")
-    lines += ["", "## Accuracy by tag", "", "| tag | correct / total |", "|---|---|"]
-    lines += [f"| {t} | {v['correct']} / {v['total']} |" for t, v in report["by_tag"].items()]
-    lines += ["", "## Mismatches", "", "| source_id | gold | predicted | reasons | text |", "|---|---|---|---|---|"]
-    for m in report["mismatches"]:
-        text = m["text"].replace("|", "\\|").replace("\n", " ")
-        lines.append(f"| {m['source_id']} | {m['gold']} | {m['predicted']} | {', '.join(m['reasons'])} | {text} |")
-    return "\n".join(lines) + "\n"
-
-
-def write_report(result: EvalResult, dataset: Path, out_dir: Path) -> tuple[Path, Path]:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    stem = f"{dataset.stem}-{result.report['backend']}"
-    json_path, md_path = out_dir / f"{stem}.json", out_dir / f"{stem}.md"
-    json_path.write_text(json.dumps(result.report, indent=2, ensure_ascii=False) + "\n")
-    md_path.write_text(render_markdown(result.report, dataset.name))
-    decisions_path = out_dir / f"{stem}.decisions.jsonl"
-    decisions_path.write_text("".join(d.model_dump_json() + "\n" for d in result.decisions))
-    return json_path, md_path
+if __name__ == "__main__":
+    sys.exit(main(*sys.argv[1:4]))

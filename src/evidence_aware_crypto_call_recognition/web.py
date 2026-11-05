@@ -1,4 +1,4 @@
-"""Local web page for reading decisions: paste a post or a package case, or run a dataset.
+"""Local web page for reading decisions: one post, many posts, or one package case.
 
 Usage: python3 -m evidence_aware_crypto_call_recognition.web [--port 8000]
 
@@ -16,8 +16,9 @@ from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
+from evidence_aware_crypto_call_recognition import __version__
 from evidence_aware_crypto_call_recognition.cli import InputFileError, parse_case, run_case
 from evidence_aware_crypto_call_recognition.contract import text_sha256
 from evidence_aware_crypto_call_recognition.evaluate import compare
@@ -75,19 +76,39 @@ def decide_case(case: dict) -> dict:
             "ms": round((time.perf_counter() - started) * 1000, 2)}
 
 
-def _load(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-
-
-def run_set(name: str) -> dict:
+def _set_file(name: str, kind: str) -> Path:
     base = SETS[name]
-    cases = _load(base.with_name(base.name + ".inputs.jsonl"))
-    references = {r["case_id"]: r for r in _load(base.with_name(base.name + ".references.jsonl"))}
+    return base.with_name(f"{base.name}.{kind}.jsonl")
+
+
+def available_sets() -> list[str]:
+    return [name for name in SETS if _set_file(name, "inputs").exists()]
+
+
+def run_batch(inputs_text: str, set_name: str | None) -> dict:
+    """Decide every case in JSONL text; compare with the named set's references where its case IDs match."""
+    cases = []
+    for number, line in enumerate(inputs_text.splitlines(), 1):
+        if line.strip():
+            try:
+                cases.append(parse_case(line))
+            except InputFileError as error:
+                raise InputFileError(f"line {number}: {error}") from error
+    if not cases:
+        raise ValueError("no cases to classify")
+    ids = [case["case_id"] for case in cases]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate case IDs cannot be bound to results")
     started = time.perf_counter()
     results = [decide_case(case) for case in cases]
-    elapsed = time.perf_counter() - started
-    comparison = compare({c["case_id"]: c for c in cases}, references, {r["output"]["case_id"]: r["output"] for r in results})
-    return {**comparison, "results": results, "ms_per_case": round(elapsed * 1000 / max(len(cases), 1), 2)}
+    response = {"results": results, "ms_per_case": round((time.perf_counter() - started) * 1000 / len(cases), 2)}
+    if set_name:
+        lines = _set_file(set_name, "references").read_text(encoding="utf-8").splitlines()
+        references = {r["case_id"]: r for r in map(json.loads, filter(str.strip, lines)) if r["case_id"] in set(ids)}
+        if references:
+            outputs = {r["output"]["case_id"]: r["output"] for r in results}
+            response.update(compare({c["case_id"]: c for c in cases}, references, outputs))
+    return response
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -105,12 +126,17 @@ class Handler(BaseHTTPRequestHandler):
         self._send(status, json.dumps(value, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
     def do_GET(self) -> None:
-        path = urlsplit(self.path).path
-        if path == "/":
+        url = urlsplit(self.path)
+        if url.path == "/":
             self._send(HTTPStatus.OK, PAGE.read_bytes(), "text/html; charset=utf-8")
-        elif path == "/api/sets":
-            available = [name for name, base in SETS.items() if base.with_name(base.name + ".inputs.jsonl").exists()]
-            self._json(available)
+        elif url.path == "/api/health":
+            self._json({"version": __version__, "reader": "rules", "sets": available_sets()})
+        elif url.path == "/api/set":
+            name = parse_qs(url.query).get("name", [""])[0]
+            if name not in available_sets():
+                self._json({"error": "unknown dataset"}, HTTPStatus.NOT_FOUND)
+                return
+            self._json({"name": name, "inputs": _set_file(name, "inputs").read_text(encoding="utf-8")})
         else:
             self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
 
@@ -131,13 +157,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(decide_case(case_from_post(text, context, bool(body.get("fragment")), bool(body.get("image")))))
             elif path == "/api/case":
                 self._json(decide_case(parse_case(body["case_json"])))
-            elif path == "/api/run":
-                if body.get("set") not in SETS:
+            elif path == "/api/batch":
+                set_name = body.get("set")
+                if set_name is not None and set_name not in available_sets():
                     raise ValueError("unknown dataset")
-                self._json(run_set(body["set"]))
+                self._json(run_batch(body["inputs"], set_name))
             else:
                 self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
-        except (InputFileError, ValueError, KeyError, TypeError) as error:
+        except (InputFileError, ValueError, KeyError, TypeError, AttributeError) as error:
             self._json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
 
 

@@ -110,7 +110,7 @@ PAST_ACQUISITION = re.compile(
 COUNTERFACTUAL = re.compile(r"\b(?:would|could|should|might)\s+have\b|\balmost\b|\bnearly\b|\bwish\s+(?:I|we)\s+had\b|\bif\s+(?:I|we)\s+had\b", _I)
 HEDGE = re.compile(r"\bputs\s+(?:on|against)\b|\bput\s+options?\b|\bhedg\w*|\bprotective\b|\bprotection\b", _I)
 HISTORIC_TIME = re.compile(
-    r"\b(?:last\s+(?:week|month|year|summer|spring|winter|autumn|fall|cycle|night|time|quarter)|yesterday|ago|previously|formerly"
+    r"\b(?:last\s+(?:week|month|year|summer|spring|winter|autumn|fall|cycle|night|time|quarter|january|february|march|april|may|june|july|august|september|october|november|december)|yesterday|ago|previously|formerly"
     r"|back\s+(?:then|in\s+(?:the\s+day|20\d\d|spring|summer|autumn|fall|winter|january|february|march|april|may|june|july"
     r"|august|september|october|november|december))|in\s+(?:spring|summer|autumn|fall|winter|20\d\d|january|february|march|april|may|june|july|august"
     r"|september|october|november|december)|history|historical|archive\w*|earlier\s+(?:this|in)|years?\s+back|at\s+the\s+time|old)\b", _I)

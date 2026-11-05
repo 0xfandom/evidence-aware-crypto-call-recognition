@@ -110,6 +110,10 @@ class Decisions(unittest.TestCase):
             self.assertEqual(out["label"], "BUY", text)
             self.assertLess(out["confidence"], CONFIDENCE_GATE, text)
 
+    def test_purchase_dated_by_last_month_name_is_past(self):
+        out = run(make_case("I bought $AAAA last March and I still hold it."))
+        self.assertEqual(out["label"], "NO_NEW_BUY")
+
     def test_invalid_input_gets_no_label(self):
         case = make_case("I am starting $AAAA today.")
         case["primary"]["text_sha256"] = "0" * 64

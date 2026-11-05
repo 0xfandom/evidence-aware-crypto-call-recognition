@@ -11,6 +11,7 @@ dependencies = []
 [project.scripts]
 evidence-aware-crypto-call-recognition = "evidence_aware_crypto_call_recognition.cli:main"
 eacr = "evidence_aware_crypto_call_recognition.cli:main"
+eacr-web = "evidence_aware_crypto_call_recognition.web:main"
 
 [build-system]
 requires = ["setuptools>=61"]
@@ -18,3 +19,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+evidence_aware_crypto_call_recognition = ["web/index.html"]

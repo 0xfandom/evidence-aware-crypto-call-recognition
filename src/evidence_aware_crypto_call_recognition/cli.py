@@ -30,18 +30,26 @@ def _reject_constant(name: str) -> float:
     raise ValueError(f"non-finite number {name}")
 
 
+def parse_case(text: str) -> dict:
+    """One case from JSON text, rejecting duplicate fields and non-finite numbers."""
+    try:
+        value = json.loads(text, object_pairs_hook=_reject_duplicate_keys, parse_constant=_reject_constant)
+    except ValueError as error:
+        raise InputFileError(f"invalid JSON ({error})") from error
+    if not isinstance(value, dict) or not isinstance(value.get("case_id"), str):
+        raise InputFileError("a JSON object with a string case_id is required")
+    return value
+
+
 def read_cases(path: Path) -> list[dict]:
     cases: list[dict] = []
     for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
         try:
-            value = json.loads(line, object_pairs_hook=_reject_duplicate_keys, parse_constant=_reject_constant)
-        except ValueError as error:
-            raise InputFileError(f"{path}: line {number}: invalid JSON ({error})") from error
-        if not isinstance(value, dict) or not isinstance(value.get("case_id"), str):
-            raise InputFileError(f"{path}: line {number}: a JSON object with a string case_id is required")
-        cases.append(value)
+            cases.append(parse_case(line))
+        except InputFileError as error:
+            raise InputFileError(f"{path}: line {number}: {error}") from error
     ids = [case["case_id"] for case in cases]
     duplicates = sorted({i for i in ids if ids.count(i) > 1})
     if duplicates:
@@ -75,6 +83,18 @@ def process_case(case: dict) -> tuple[dict, dict | None]:
     return output, decision.trace
 
 
+def run_case(case: dict) -> tuple[dict, dict | None, list[str]]:
+    """Process one case; a failure becomes CAPACITY_LIMIT, never a fabricated label. Returns self-check problems too."""
+    try:
+        output, trace = process_case(case)
+    except Exception as error:  # one broken case must not lose every other result
+        traceback.print_exc(file=sys.stderr)
+        output, trace = ({"case_id": case["case_id"], "status": "CAPACITY_LIMIT", "error_codes": ["PROCESSING_FAILURE"],
+                          "explanation": f"The local reader failed on this case ({type(error).__name__}); "
+                                         "no label is fabricated."}, None)
+    return output, trace, output_errors(case, output)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="eacr", description=__doc__)
     parser.add_argument("--inputs", required=True, type=Path, help="input JSONL, one case per line")
@@ -91,14 +111,7 @@ def main(argv: list[str] | None = None) -> int:
 
     outputs, traces, self_check_failures = [], [], 0
     for case in cases:
-        try:
-            output, trace = process_case(case)
-        except Exception as error:  # one broken case must not lose every other result
-            traceback.print_exc(file=sys.stderr)
-            output, trace = ({"case_id": case["case_id"], "status": "CAPACITY_LIMIT", "error_codes": ["PROCESSING_FAILURE"],
-                              "explanation": f"The local reader failed on this case ({type(error).__name__}); "
-                                             "no label is fabricated."}, None)
-        problems = output_errors(case, output)
+        output, trace, problems = run_case(case)
         if problems:
             self_check_failures += 1
             print(f"eacr: self-check failed for {case['case_id']}: {', '.join(problems)}", file=sys.stderr)

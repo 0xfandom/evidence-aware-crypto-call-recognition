@@ -41,48 +41,71 @@ def covered(required: dict, spans: list[dict]) -> bool:
                and s["end_utf16"] >= required["end_utf16"] for s in spans)
 
 
-def main(inputs_path: str, references_path: str, predictions_path: str) -> int:
-    inputs, references, predictions = load(inputs_path), load(references_path), load(predictions_path)
-    mismatches = 0
+def _compare_one(case: dict, reference: dict, prediction: dict | None) -> dict:
+    row = {"case_id": reference["case_id"], "reference_label": reference.get("label"),
+           "expected_status": reference["expected_status"], "tags": reference["boundary_tags"]}
+    if prediction is None:
+        return {**row, "ok": False, "status": "MISSING"}
+    row.update(status=prediction["status"], label=prediction.get("label"), confidence=prediction.get("confidence"),
+               error_codes=prediction.get("error_codes", []))
+    if reference["expected_status"] != "OK":
+        ok = prediction["status"] == "INPUT_INVALID" and bool(set(reference["expected_errors"]) & set(prediction["error_codes"]))
+        return {**row, "ok": ok}
+    catalogue = {s["evidence_id"]: s for s in case["evidence_catalogue"]}
+    assets = sorted(b["asset_mention"] for b in prediction.get("current_buys", []))
+    accepted = prediction.get("confidence", 0) >= 0.75
+    support = all(covered(r, [catalogue[i] for i in prediction.get("evidence_ids", [])]) for r in reference["required_support"])
+    for asset, required in reference.get("buy_support", {}).items():
+        entry = next((b for b in prediction.get("current_buys", []) if b["asset_mention"] == asset), None)
+        if not entry or not all(covered(r, [catalogue[i] for i in entry["evidence_ids"]]) for r in required):
+            support = False
+    ok = row["label"] == reference["label"] and assets == sorted(reference["buy_assets"]) and accepted and support
+    return {**row, "ok": ok, "assets": assets, "reference_assets": sorted(reference["buy_assets"]),
+            "accepted": accepted, "support": support}
+
+
+def compare(inputs: dict[str, dict], references: dict[str, dict], predictions: dict[str, dict]) -> dict:
+    """Per-case rows and a summary: fully correct, BUYs found, accepted false BUYs, by tag."""
+    rows = [_compare_one(inputs[case_id], reference, predictions.get(case_id)) for case_id, reference in references.items()]
     buy = Counter()
     by_tag: dict[str, Counter] = defaultdict(Counter)
-    for case_id, reference in references.items():
-        case, prediction = inputs[case_id], predictions.get(case_id)
-        if prediction is None:
-            print(f"{case_id}: MISSING")
-            mismatches += 1
+    for row in rows:
+        if row["expected_status"] != "OK" or row["status"] == "MISSING":
             continue
-        if reference["expected_status"] != "OK":
-            ok = prediction["status"] == "INPUT_INVALID" and set(reference["expected_errors"]) & set(prediction["error_codes"])
-            print(f"{case_id}: {'ok ' if ok else 'BAD'} INPUT_INVALID {prediction.get('error_codes')}")
-            mismatches += not ok
-            continue
-        catalogue = {s["evidence_id"]: s for s in case["evidence_catalogue"]}
-        label = prediction.get("label")
-        assets = sorted(b["asset_mention"] for b in prediction.get("current_buys", []))
-        accepted = prediction.get("confidence", 0) >= 0.75
-        support = all(covered(r, [catalogue[i] for i in prediction.get("evidence_ids", [])]) for r in reference["required_support"])
-        for asset, required in reference.get("buy_support", {}).items():
-            entry = next((b for b in prediction.get("current_buys", []) if b["asset_mention"] == asset), None)
-            if not entry or not all(covered(r, [catalogue[i] for i in entry["evidence_ids"]]) for r in required):
-                support = False
-        good = label == reference["label"] and assets == sorted(reference["buy_assets"]) and accepted and support
-        mismatches += not good
-        accepted_buy = label == "BUY" and accepted
-        buy["reference"] += reference["label"] == "BUY"
-        buy["found"] += reference["label"] == "BUY" and accepted_buy and good
+        accepted_buy = row["label"] == "BUY" and row["accepted"]
+        buy["reference"] += row["reference_label"] == "BUY"
+        buy["found"] += row["reference_label"] == "BUY" and row["ok"]
         buy["accepted"] += accepted_buy
-        buy["false"] += accepted_buy and reference["label"] != "BUY"
-        for tag in reference["boundary_tags"]:
+        buy["false"] += accepted_buy and row["reference_label"] != "BUY"
+        for tag in row["tags"]:
             by_tag[tag]["total"] += 1
-            by_tag[tag]["correct"] += good
-        print(f"{case_id}: {'ok ' if good else 'BAD'} ref={reference['label']:<10} got={label:<10} "
-              f"conf={prediction.get('confidence')} assets={assets} support={support} tags={reference['boundary_tags']}")
-    print(f"\n{len(references) - mismatches}/{len(references)} cases fully match (label, asset set, gate, support spans)")
-    print(f"fully correct: {_rate(len(references) - mismatches, len(references))}")
-    print(f"BUY found:     {_rate(buy['found'], buy['reference'])}")
-    print(f"accepted false BUY: {buy['false']} of {buy['accepted']} accepted BUYs")
-    print("by tag: " + ", ".join(f"{t} {c['correct']}/{c['total']}" for t, c in sorted(by_tag.items())))
+            by_tag[tag]["correct"] += row["ok"]
+    correct = sum(row["ok"] for row in rows)
+    summary = {"cases": len(rows), "correct": correct, "correct_ci95": wilson_interval(correct, len(rows)),
+               "reference_buys": buy["reference"], "buys_found": buy["found"],
+               "buys_found_ci95": wilson_interval(buy["found"], buy["reference"]),
+               "accepted_buys": buy["accepted"], "accepted_false_buys": buy["false"],
+               "by_tag": {tag: dict(counts) for tag, counts in sorted(by_tag.items())}}
+    return {"rows": rows, "summary": summary}
+
+
+def main(inputs_path: str, references_path: str, predictions_path: str) -> int:
+    result = compare(load(inputs_path), load(references_path), load(predictions_path))
+    for row in result["rows"]:
+        mark = "ok " if row["ok"] else "BAD"
+        if row["status"] == "MISSING":
+            print(f"{row['case_id']}: MISSING")
+        elif row["expected_status"] != "OK":
+            print(f"{row['case_id']}: {mark} INPUT_INVALID {row['error_codes']}")
+        else:
+            print(f"{row['case_id']}: {mark} ref={row['reference_label']:<10} got={row['label']:<10} "
+                  f"conf={row['confidence']} assets={row['assets']} support={row['support']} tags={row['tags']}")
+    s = result["summary"]
+    print(f"\n{s['correct']}/{s['cases']} cases fully match (label, asset set, gate, support spans)")
+    print(f"fully correct: {_rate(s['correct'], s['cases'])}")
+    print(f"BUY found:     {_rate(s['buys_found'], s['reference_buys'])}")
+    print(f"accepted false BUY: {s['accepted_false_buys']} of {s['accepted_buys']} accepted BUYs")
+    print("by tag: " + ", ".join(f"{t} {c['correct']}/{c['total']}" for t, c in s["by_tag"].items()))
     return 0
 
 

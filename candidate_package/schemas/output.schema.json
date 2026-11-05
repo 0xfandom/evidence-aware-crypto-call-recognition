@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/synthetic-buy/output-v1",
+  "title": "Synthetic BUY assessment output v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "status",
+        "label",
+        "confidence",
+        "current_buys",
+        "evidence_ids",
+        "explanation",
+        "limitations",
+        "execution_verified"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "status": {
+          "const": "OK"
+        },
+        "label": {
+          "enum": [
+            "BUY",
+            "NO_NEW_BUY",
+            "UNCLEAR"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "current_buys": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "asset_mention",
+              "evidence_ids"
+            ],
+            "properties": {
+              "asset_mention": {
+                "type": "string",
+                "pattern": "^\\$[A-Z][A-Z0-9]{2,11}$"
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "maxItems": 32
+              }
+            }
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 12
+        },
+        "execution_verified": {
+          "const": false
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "status",
+        "error_codes",
+        "explanation"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "INPUT_INVALID",
+            "CAPACITY_LIMIT"
+          ]
+        },
+        "error_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  ],
+  "$comment": "BUY iff nonempty current_buys; no current_buys for NO_NEW_BUY/UNCLEAR. UNCLEAR requires a limitation. References must exist, assets must appear in cited source, and multiple BUY assets require disjoint PRIMARY evidence. assessment.output_errors enforces these cross-field checks."
+}

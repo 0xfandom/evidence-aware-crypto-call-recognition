@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["VAGUE_HYPOTHETICAL", "NO_CONCRETE_BUY_ACTION"], "limitations": ["Post is short and contains no explicit acquisition instruction or trigger beyond a vague 'one day' condition"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

@@ -1,228 +1,128 @@
 # Evidence-Aware Crypto Call Recognition
 
-Tells whether a crypto social-media post contains a **genuine, current BUY
-recommendation by its own author**, and backs every BUY with evidence checked
-against the post.
+Finds the **captured author's own current BUY recommendations** in crypto posts, not just
+trading words, and backs each one with evidence IDs from the supplied catalogue.
 
-Credibility scores for crypto influencers depend on knowing which posts were
-real buy calls. Most posts only look like calls: price forecasts, old calls,
-existing positions, jokes, paid promotions. This prototype separates them and
-refuses to guess when the evidence is thin.
+It reads and writes the assessment package's contract (`synthetic-buy-assessment-v1`).
+The package is in [`candidate_package/`](candidate_package/README.md), unchanged, and its
+`assessment.py` validates and scores the output. Everything runs offline on the Python
+standard library, with no dependencies.
 
-| Label | Meaning |
-|---|---|
-| `BUY` | A genuine, current buy call by the author, with checked evidence attached |
-| `NO_NEW_BUY` | No new buy call (forecast, holding, past call, joke, referral, question, warning…) |
-| `ABSTAIN` | Not enough evidence to decide safely, so it goes to a human instead |
+## Requirements
 
-A wrong BUY damages a real person's score; an abstention only costs a review.
-The system is built around that asymmetry.
-
-## Installation
-
-Requirements: [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 if
-needed). The first install needs internet access; everything after that runs
-offline.
-
-```bash
-uv sync --extra llm      # installs the package; the llm extra adds the Claude Agent SDK
-```
-
-Node.js is **not** needed: the web UI ships pre-built. Node is only needed to
-change the UI (see [Web UI and API](#web-ui-and-api)).
+Python 3.10 or newer; tested on 3.12, 3.13 and 3.14. Nothing to install. (macOS ships
+Python 3.9 as `python3`; use a newer interpreter, for example `python3.12`.)
 
 ## Usage
 
-The package installs two equivalent commands: `eacr` and
-`evidence-aware-crypto-call-recognition`.
-
-```bash
-uv run pytest                                # run the test suite
-uv run eacr eval data/eval_v2.jsonl          # evaluate on the held-out set
-uv run eacr eval data/eval_v2.jsonl --backend hybrid --replay results/llm-cache
-                                             # reproduce the Claude results offline, no account needed
-uv run eacr classify posts.jsonl             # classify posts (a JSONL file, or - for stdin)
-uv run eacr serve                            # web UI at http://127.0.0.1:8000, API docs at /docs
+```sh
+PYTHONPATH=src python3 -m evidence_aware_crypto_call_recognition \
+  --inputs INPUT.jsonl --output predictions.jsonl
 ```
 
-All of these use the offline **rules** classifier by default. Add
-`--backend hybrid` or `--backend llm` to use Claude (see
-[Using Claude](#using-claude-optional)).
+- One output object per case ID, in input order.
+- `--trace trace.jsonl` also writes the sentence-by-sentence reading behind each decision,
+  including the operation found for each asset (entry, exit, short, cover, hold, past,
+  hedge).
+- Exit codes: 0 means done. 2 means the input file could not be bound to results
+  (malformed JSON, duplicate field, non-finite number, missing or duplicate case ID),
+  and nothing is written. 3 means at least one output failed the contract self-check,
+  which would be a bug.
 
-### Example: classify one post
+Optional install: `pip install .` provides the same tools as the `eacr` and `eacr-web`
+commands.
 
-```bash
-echo '{"source_id":"x:1","author":{"handle":"@kol"},"text":"Buying $SOL here, 140 is the level"}' \
-  | uv run eacr classify -
+## Web UI
+
+```sh
+PYTHONPATH=src python3 -m evidence_aware_crypto_call_recognition.web   # http://127.0.0.1:8000/
 ```
 
-Output (abridged; the full decision also carries limitations, versions and cost):
+A local page on the standard-library HTTP server, bound to 127.0.0.1:
+
+- **Post**: paste a post, optionally with context posts, a missing prefix or an image
+  that was not captured. It is wrapped into a valid package case and decided. The cited
+  evidence is highlighted, and the reading shows the operation found for each asset.
+- **Package case**: paste one input case as JSON. Integrity problems are rejected with
+  the package's error codes.
+- **Dataset**: run the development set or a set in `data/`, compared with its references,
+  with Wilson intervals. Click a row to see that decision. The sets are read from the
+  repository checkout, so this tab is empty when the package is installed elsewhere.
+
+Links such as `/?example=joke` or `/?set=development` open a state directly.
+A one-minute walkthrough is in [`assets/demo.mp4`](assets/demo.mp4).
+
+![Decision for a post with an exit and an entry](assets/ui.png)
+
+## Reproduce
+
+From the repository root:
+
+```sh
+python3 -B candidate_package/verify_package.py            # package files are unchanged
+python3 -B -m unittest discover -s tests -t tests          # offline tests (71)
+PYTHONPATH=src python3 -B -m evidence_aware_crypto_call_recognition \
+  --inputs candidate_package/development.inputs.jsonl --output predictions.jsonl
+python3 -B candidate_package/assessment.py validate-outputs \
+  --inputs candidate_package/development.inputs.jsonl --predictions predictions.jsonl
+python3 -B candidate_package/assessment.py score \
+  --inputs candidate_package/development.inputs.jsonl \
+  --references candidate_package/development.references.jsonl \
+  --predictions predictions.jsonl --report development-report.json
+scripts/run_sets.sh python3                                # every set in data/, with intervals
+```
+
+## Example
+
+Input case `dev-e0e02c5a82` (primary text, two lines):
+
+```
+I am reducing $PAVRI exposure here; do not treat that as a fresh entry.
+
+$MEKRI is where I am directing a new allocation today.
+```
+
+Output:
 
 ```json
-{
-  "label": "BUY",
-  "confidence": 0.85,
-  "source": {"source_id": "x:1"},
-  "author": {"status": "ATTRIBUTED", "handle": "@kol"},
-  "calls": [{
-    "asset": {"status": "SYMBOL", "symbol": "SOL", "as_written": "$SOL", "verified": false},
-    "supporting_text": "Buying $SOL here, 140 is the level",
-    "explicitness": "explicit"
-  }]
-}
+{"case_id": "dev-e0e02c5a82", "status": "OK", "label": "BUY", "confidence": 0.9,
+ "current_buys": [{"asset_mention": "$MEKRI", "evidence_ids": ["ev_…"]}],
+ "evidence_ids": ["ev_…"],
+ "explanation": "Current own BUY. $MEKRI: line 3 carries an explicit present own entry. Not a BUY: $PAVRI is an exit, sale or reduction (line 1).",
+ "limitations": ["A stated or claimed action is not verified execution.",
+                 "Asset identity is the literal cashtag only; no contract, chain or project identity was checked."],
+ "execution_verified": false}
 ```
-
-Each input line is a post (as above) or a dataset row
-`{"post": {...}, "gold": {...}}`. The full input/output contract is in
-[`docs/architecture.md`](docs/architecture.md).
-
-### Example: evaluate
-
-`uv run eacr eval data/eval_v2.jsonl` prints a report and writes it to `runs/`
-(git-ignored) as Markdown, JSON and the full decisions. The first lines:
-
-```
-| BUY correctly recognised | 12 |
-| BUY missed → NO_NEW_BUY | 2 |
-| BUY missed → ABSTAIN | 4 |
-| Incorrect BUY (false positives) | 0 (from NO_NEW_BUY 0, from ABSTAIN 0) |
-| BUY precision (95% CI) | 1.0 (0.757, 1.0) |
-| BUY recall (95% CI) | 0.667 (0.437, 0.837) |
-```
-
-The report also covers abstentions, attribution errors, cost and latency, a
-confusion matrix and accuracy per case type. `--split-tags TAG,TAG` adds the
-same figures for rows with any of those gold tags and for the rest.
-
-## Web UI and API
-
-```bash
-uv run eacr serve            # add --port 8765 to change the port
-```
-
-- **One post:** paste a post or load an example, then see the label, the
-  evidence highlighted in the post, source and author, the asset (never marked
-  verified), who decided, and the latency.
-- **Many posts:** paste or upload JSON/JSONL. With gold labels it also shows the
-  evaluation metrics, and rows that disagree with the gold label are marked.
-- **Demo links:** `/?example=sarcasm&backend=hybrid` opens an example and runs
-  it. Examples: `explicit`, `implicit`, `forecast`, `past-call`, `sarcasm`,
-  `scam-warning`, `reply`, `no-source`.
-
-| Endpoint | Body | Returns |
-|---|---|---|
-| `GET /api/health` | — | Status and policy, prompt, model and code versions |
-| `POST /api/classify` | `{"post": {...}, "backend": "rules"}` | One decision |
-| `POST /api/classify/text` | `{"text": "...", "source_id": null, "author_handle": null, ...}` | One decision |
-| `POST /api/classify/batch` | `{"items": [...], "backend": "rules"}` (up to 200) | Decisions, a summary, and metrics when gold labels are present |
-
-- The server listens on localhost only, without authentication.
-- Pasted text without a source id gets the marker `manual:<hash>` and a
-  limitation saying it must not be used for scoring. JSON posts without a source
-  id abstain.
-- The React source is in `frontend/`. To change the UI, run
-  `npm install && npm run build` there; it rebuilds into the Python package.
-
-## Using Claude (optional)
-
-`--backend llm` sends every post to Claude; `--backend hybrid` lets the rules
-settle only clear non-calls and sends everything else, including every rules
-BUY, to Claude. Both use the
-[Claude Agent SDK](https://code.claude.com/docs/en/agent-sdk), which ships its
-own CLI, so nothing else needs installing.
-
-Copy the template and set **one** credential:
-
-```bash
-cp .env.example .env
-```
-
-| Option | How to get it | `.env` key |
-|---|---|---|
-| Claude subscription token | Install Claude Code, run `claude setup-token`, log in, copy the token | `CLAUDE_CODE_OAUTH_TOKEN` |
-| Anthropic API key | [console.anthropic.com](https://console.anthropic.com) → Settings → API keys | `ANTHROPIC_API_KEY` |
-| Existing Claude Code login | Nothing to set; the SDK uses it | — |
-
-Optional settings (defaults shown in `.env.example`):
-
-| Setting | Default | Effect |
-|---|---|---|
-| `EACR_MODEL` / `--model` | `claude-haiku-5-5` | Claude model |
-| `EACR_MAX_BUDGET_USD_PER_POST` | `0.05` | Hard cost cap per call |
-| `EACR_RUN_BUDGET_USD` / `--run-budget` | `2.00` | Cap per run; each call in progress reserves the per-call cap, so parallel calls cannot pass it; once reached, remaining posts abstain |
-
-- **Cache:** answers are cached in `.cache/llm/` by post, model, prompt and
-  policy, so an unchanged post is never paid for twice. Use `--no-cache` to
-  disable it.
-- **Replay:** `--replay results/llm-cache` uses only the recorded Haiku answers
-  committed in the repo and never calls the API, so the Claude results can be
-  checked without an account. A post with no recorded answer abstains with
-  `NOT_IN_REPLAY_CACHE`.
-- **Cost of this project:** all Claude runs used the author's own account and
-  cost about $2.35 in total, covering every evaluation, test and demo run. No
-  Vertrauen credentials, data or budget were used. The default rules path and
-  the replay need no API access at all.
-- **Live test:** `EACR_LIVE=1 uv run pytest -m live` makes one real call, for
-  under $0.01.
-- `.env` is git-ignored; never commit a credential.
-
-## How it works
-
-```
-Post ──▶ classifier proposes (rules | llm | hybrid) ──▶ evidence guard checks ──▶ Decision
-```
-
-- **Rules:** offline and instant. In the hybrid they may only rule a post out
-  (no buy call). A rules BUY is never final: Claude must confirm it, because
-  buy wording alone cannot tell "I'm buying" from "whales are buying" or a
-  past trade. Known weak spots (an asset named only in a quoted post, scam
-  warnings, several assets) also always go to Claude.
-- **Claude:** reads implicit, slang, typo and non-English calls. It never sees
-  the author or source id, and any failure becomes `ABSTAIN`.
-- **Evidence guard:** every proposed call must quote the post word for word,
-  and the quote must mention its asset and be more than the bare ticker. The
-  asset must be written in the post as a whole word, a condition must be copied
-  from the post, source and author come from input metadata only, and
-  `verified` is always `false`. Text the model writes itself (its limitations)
-  never reaches the output. The guard can only drop or downgrade, never add.
-
-Design decisions and rejected alternatives are in
-[`docs/architecture.md`](docs/architecture.md).
 
 ## Results
 
-Held-out set `data/eval_v2.jsonl`: 48 synthetic posts, 18 of them real BUYs.
+On the package's development set, the package's scorer reports 0 invalid outputs, 3/3
+correct integrity rejections, 21/21 accepted labels, 8/8 BUYs with exact asset sets and
+0 false BUYs. The reader was written with that set in view, so the first runs on sets it
+had not seen are the better guide:
 
-| Classifier | Model | BUY correct | False BUY | Attribution errors | Cost | Latency per post |
-|---|---|---|---|---|---|---|
-| rules | — | 12 / 18 | 0 | 1 | $0 | under 1 ms |
-| **hybrid** | **Haiku 5.5 (default)** | **17 / 18** | **0** | **0** | **$0.026** | about 5 s when sent to Claude |
+| Set (first run, code frozen) | Fully correct* | BUYs found | Accepted false BUYs |
+|---|---|---|---|
+| Probe set 2, 30 posts written from the policy | 18/30 (95% CI 0.42–0.75) | 3/12 | 0 |
+| 0.1.0 datasets, 147 posts converted to the package format | 87/147 (0.51–0.67) | 20/54 | 9, all on rows labelled `debatable` |
 
-- No Claude run produced a false BUY or invented evidence.
-- On this data the hybrid sends 46 of 48 posts to Claude, so it saves little
-  over `--backend llm` ($0.027). The saving comes from everyday posts with no
-  asset and no buy wording, which this BUY-heavy test set has few of.
-- These are **not** accuracy claims: the data is small and synthetic, and the
-  95% intervals are wide.
-- Opus 5.5 was also measured, on an earlier prompt and hybrid rule; see
-  [`docs/findings.md`](docs/findings.md), which also covers limitations and next steps.
-- 18 of the 48 posts target known hard cases. On the other 30 the rules alone
-  already find 9 of 10 BUYs; most of the hybrid's gain is on the targeted rows
-  (3 → 7 of 8). See [`docs/findings.md`](docs/findings.md).
-- Committed reports are in `results/rules/`, `results/haiku/` (the default
-  model) and `results/opus/` (earlier prompt and hybrid rule). Reports that
-  replayed recorded answers show $0; `uv run python scripts/compare_models.py`
-  recomputes their real cost.
+\* Label, asset set, confidence at or above 0.75, and the reference support spans covered.
 
-## Project layout
+Missed BUYs were wording the rules did not know, and most of them fell to `NO_NEW_BUY`
+rather than producing a false BUY. Those categories were added after each run, so later figures on the same sets are
+not accuracy estimates. Details, the confidence table and the known limits are in
+[docs/DESIGN.md](docs/DESIGN.md). The dataset shapes are in [data/README.md](data/README.md).
 
-```
-src/evidence_aware_crypto_call_recognition/   the package: rules, Claude backend, guard, pipeline, API, CLI
-frontend/                                      React + Tailwind source of the web UI
-tests/                                         pytest suite (the live Claude test is skipped by default)
-data/                                          synthetic development and held-out datasets
-docs/                                          policy, architecture, findings, production plan
-results/                                       committed reports (rules, haiku, opus), recorded Claude answers, measured costs
-scripts/                                       model comparison table
-assets/                                        demo video
-```
+## Layout
+
+- `src/evidence_aware_crypto_call_recognition/`: `integrity` → `segment` → `reading` →
+  `decide` → `selfcheck`, driven by `cli`. `evaluate` compares predictions with references.
+  `web` serves the local page in `web/index.html`.
+- `assets/`: UI screenshot and demo video.
+- `tests/`: offline `unittest` suite.
+- `data/`: probe sets and the converted 0.1.0 sets, in the package's input and reference
+  shapes.
+- `scripts/`: probe builder, 0.1.0 dataset importer, runner for all sets.
+- `results/`: first-run records, with the hash of the source they ran on.
+- `docs/DESIGN.md`: engineering choices, evidence handling, confidence, limits, next steps.
+- `candidate_package/`: the assessment package, unchanged.

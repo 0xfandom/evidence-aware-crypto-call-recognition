@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.9, "calls": [], "reasons": ["SARCASM_OR_MOCKERY", "NO_GENUINE_BUY_CALL"], "limitations": ["Relies on the clown emoji and the 'what could possibly go wrong' phrasing reading as mockery; no surrounding context was provided."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

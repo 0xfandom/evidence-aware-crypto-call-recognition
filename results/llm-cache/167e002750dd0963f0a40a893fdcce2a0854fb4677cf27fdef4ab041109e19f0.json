@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.9, "calls": [], "reasons": ["GENERIC_ADVICE_NO_SPECIFIC_ASSET"], "limitations": ["Post gives general strategy phrases ('buy the dip', 'DCA') without naming any specific asset"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

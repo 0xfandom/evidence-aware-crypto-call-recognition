@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.97, "calls": [], "reasons": ["NO_BUY_CALL", "GREETING_ONLY_NO_ASSET"], "limitations": ["Post is a generic greeting with no asset or buy action"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

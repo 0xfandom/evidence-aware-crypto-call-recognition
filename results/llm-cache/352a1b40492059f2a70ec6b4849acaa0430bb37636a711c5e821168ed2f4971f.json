@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.95, "calls": [], "reasons": ["HOLDING_ONLY_NO_BUY_ACTION"], "limitations": ["Post states an existing position and refusal to sell; contains no instruction or disclosure of buying now."]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}

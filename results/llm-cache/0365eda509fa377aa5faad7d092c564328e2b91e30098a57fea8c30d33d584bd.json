@@ -1,1 +1,0 @@
-{"output": {"label": "NO_NEW_BUY", "confidence": 0.97, "calls": [], "reasons": ["NEGATIVE_STANCE", "NO_BUY_ACTION"], "limitations": ["Post is a clear refusal to buy XRP; no buy-side wording present"]}, "model": "claude-haiku-5-5", "prompt_version": "classify_v1@0ed51e26f8cb", "policy": "2026-11-02.1"}
